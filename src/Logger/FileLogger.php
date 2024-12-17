@@ -36,10 +36,11 @@ class FileLogger extends LoggerAbstract {
     }
 
     protected function writeLog(string $logEntry, string $level): void {
-        try {
-            file_put_contents($this->logFile, $logEntry . PHP_EOL, FILE_APPEND);
-        } catch (Exception $e) {
-            throw new Exception("Fehler beim Schreiben in die Logdatei: " . $e->getMessage());
+        $result = @file_put_contents($this->logFile, $logEntry . PHP_EOL, FILE_APPEND);
+        if ($result === false) {
+            $error = error_get_last();
+            $message = $error['message'] ?? 'Unbekannter Fehler beim Schreiben in die Logdatei';
+            throw new Exception("Fehler beim Schreiben in die Logdatei: " . $message);
         }
     }
 }
