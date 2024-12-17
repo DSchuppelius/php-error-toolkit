@@ -65,12 +65,20 @@ class FileLoggerTest extends TestCase {
     }
 
     public function testFileCreationFailureThrowsException() {
-        // Erzeuge einen Pfad, der hoffentlich nicht beschreibbar ist (z. B. Wurzelverzeichnis).
-        // Dieser Test ist ggf. plattformabhängig, auf manchen Systemen ist / nicht beschreibbar.
-        // Alternativ kann man einen Pfad wählen, bei dem man sicher ist, dass er nicht beschreibbar ist.
-        $nonWritableDir = '/dev';
-        if (!is_dir($nonWritableDir) || is_writable($nonWritableDir)) {
-            $this->markTestSkipped("Dieser Test konnte nicht ausgeführt werden, da das gewählte Verzeichnis beschreibbar ist oder nicht existiert.");
+        // Erzeuge ein temporäres Verzeichnis innerhalb des Systemtemp-Verzeichnisses
+        $nonWritableDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'no_write_' . uniqid();
+        if (!mkdir($nonWritableDir) && !is_dir($nonWritableDir)) {
+            $this->markTestSkipped("Konnte kein temporäres Verzeichnis erstellen, Test wird übersprungen.");
+            return;
+        }
+
+        // Versuch, Schreibrechte zu entziehen (funktioniert in der Regel unter Linux/Mac, unter Windows meist nicht)
+        // 0500 bedeutet nur Lese- und Ausführrechte für den Besitzer, kein Schreibrecht.
+        if (!chmod($nonWritableDir, 0500)) {
+            // Falls das Setzen der Rechte nicht klappt, brechen wir ab, um undefiniertes Verhalten zu vermeiden.
+            rmdir($nonWritableDir);
+            $this->markTestSkipped("Konnte die Zugriffsrechte für das Verzeichnis nicht ändern, Test wird übersprungen.");
+            return;
         }
 
         $nonWritableLogFile = $nonWritableDir . DIRECTORY_SEPARATOR . 'no_permission.log';
@@ -78,8 +86,18 @@ class FileLoggerTest extends TestCase {
         $this->expectException(Exception::class);
         $this->expectExceptionMessageMatches("/Fehler beim Erstellen der Logdatei/");
 
-        // Versucht eine Logdatei in ein nicht schreibbares Verzeichnis zu legen
-        new FileLogger($nonWritableLogFile, LogLevel::DEBUG);
+        try {
+            // Versuche eine Logdatei in einem Verzeichnis ohne Schreibrechte zu erstellen
+            new FileLogger($nonWritableLogFile, LogLevel::DEBUG);
+        } finally {
+            // Aufräumen: Rechte wieder vergeben, damit wir das Verzeichnis löschen können.
+            chmod($nonWritableDir, 0700);
+            // Prüfen ob Datei angelegt wurde (sollte nicht der Fall sein, aber sicherheitshalber)
+            if (file_exists($nonWritableLogFile)) {
+                unlink($nonWritableLogFile);
+            }
+            rmdir($nonWritableDir);
+        }
     }
 
     public function testWriteFailureThrowsException() {
