@@ -27,10 +27,11 @@ class FileLogger extends LoggerAbstract {
         $this->logFile = $logFile;
 
         if (!file_exists($logFile)) {
-            try {
-                file_put_contents($logFile, ""); // Leere Datei erstellen
-            } catch (Exception $e) {
-                throw new Exception("Fehler beim Erstellen der Logdatei: " . $e->getMessage());
+            $result = @file_put_contents($logFile, "");
+            if ($result === false) {
+                $error = error_get_last();
+                $message = $error['message'] ?? 'Unbekannter Fehler beim Erstellen der Logdatei';
+                throw new Exception("Fehler beim Erstellen der Logdatei: " . $message);
             }
         }
     }
