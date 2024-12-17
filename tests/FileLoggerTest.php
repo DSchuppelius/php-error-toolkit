@@ -68,7 +68,7 @@ class FileLoggerTest extends TestCase {
         // Erzeuge einen Pfad, der hoffentlich nicht beschreibbar ist (z. B. Wurzelverzeichnis).
         // Dieser Test ist ggf. plattformabhängig, auf manchen Systemen ist / nicht beschreibbar.
         // Alternativ kann man einen Pfad wählen, bei dem man sicher ist, dass er nicht beschreibbar ist.
-        $nonWritableDir = '/root';
+        $nonWritableDir = '/dev';
         if (!is_dir($nonWritableDir) || is_writable($nonWritableDir)) {
             $this->markTestSkipped("Dieser Test konnte nicht ausgeführt werden, da das gewählte Verzeichnis beschreibbar ist oder nicht existiert.");
         }
