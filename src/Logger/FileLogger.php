@@ -11,7 +11,7 @@
 namespace ERRORToolkit\Logger;
 
 use ERRORToolkit\Contracts\Abstracts\LoggerAbstract;
-use Exception;
+use ERRORToolkit\Exceptions\FileNotWrittenException;
 use Psr\Log\LogLevel;
 
 class FileLogger extends LoggerAbstract {
@@ -30,7 +30,7 @@ class FileLogger extends LoggerAbstract {
             if (@file_put_contents($logFile, "") === false) {
                 $error = error_get_last();
                 $message = $error['message'] ?? 'Unbekannter Fehler beim Erstellen der Logdatei';
-                throw new Exception("Fehler beim Erstellen der Logdatei: " . $message);
+                throw new FileNotWrittenException("Fehler beim Erstellen der Logdatei: " . $message);
             }
         }
     }
@@ -39,7 +39,7 @@ class FileLogger extends LoggerAbstract {
         if (@file_put_contents($this->logFile, $logEntry . PHP_EOL, FILE_APPEND) === false) {
             $error = error_get_last();
             $message = $error['message'] ?? 'Unbekannter Fehler beim Schreiben in die Logdatei';
-            throw new Exception("Fehler beim Schreiben in die Logdatei: " . $message);
+            throw new FileNotWrittenException("Fehler beim Schreiben in die Logdatei: " . $message);
         }
     }
 

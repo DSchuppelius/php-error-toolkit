@@ -31,6 +31,14 @@ trait ErrorLog {
         }
     }
 
+    protected function logNotice(string $message, array $context = []): void {
+        if (!is_null($this->logger)) {
+            $this->logger->notice($message, $context);
+        } else {
+            error_log("Notice: $message");
+        }
+    }
+
     protected function logWarning(string $message, array $context = []): void {
         if (!is_null($this->logger)) {
             $this->logger->warning($message, $context);
@@ -44,6 +52,22 @@ trait ErrorLog {
             $this->logger->error($message, $context);
         } else {
             error_log("Error: $message");
+        }
+    }
+
+    protected function logCritical(string $message, array $context = []): void {
+        if (!is_null($this->logger)) {
+            $this->logger->critical($message, $context);
+        } else {
+            error_log("Critical: $message");
+        }
+    }
+
+    protected function logAlert(string $message, array $context = []): void {
+        if (!is_null($this->logger)) {
+            $this->logger->alert($message, $context);
+        } else {
+            error_log("Alert: $message");
         }
     }
 }

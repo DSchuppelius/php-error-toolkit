@@ -8,6 +8,7 @@
  * License Uri  : https://opensource.org/license/mit
  */
 
+use ERRORToolkit\Exceptions\FileNotWrittenException;
 use PHPUnit\Framework\TestCase;
 use ERRORToolkit\Logger\FileLogger;
 use Psr\Log\LogLevel;
@@ -85,7 +86,7 @@ class FileLoggerTest extends TestCase {
         }
         $nonWritableLogFile = $nonWritableDir . DIRECTORY_SEPARATOR . 'no_permission.log';
 
-        $this->expectException(Exception::class);
+        $this->expectException(FileNotWrittenException::class);
         $this->expectExceptionMessageMatches("/Fehler beim Erstellen der Logdatei/");
 
         try {
@@ -106,7 +107,7 @@ class FileLoggerTest extends TestCase {
 
         $logger = new FileLogger($this->testLogFile, LogLevel::DEBUG);
 
-        $this->expectException(Exception::class);
+        $this->expectException(FileNotWrittenException::class);
         $this->expectExceptionMessageMatches("/Fehler beim Schreiben in die Logdatei/");
 
         // Versucht in eine Datei zu schreiben, für die keine Schreibrechte bestehen
