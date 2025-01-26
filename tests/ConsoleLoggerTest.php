@@ -28,7 +28,6 @@ class ConsoleLoggerTest extends TestCase {
     }
 
     public function testDoesNotLogBelowThreshold() {
-        // Log-Level steht auf WARNING, daher sollte INFO nicht geloggt werden.
         $logger = new ConsoleLogger(LogLevel::WARNING);
 
         ob_start();

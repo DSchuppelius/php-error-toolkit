@@ -17,18 +17,17 @@ use Psr\Log\LogLevel;
 class FileLogger extends LoggerAbstract {
     protected string $logFile;
 
-    public function __construct(?string $logFile = null, string $logLevel = LogLevel::DEBUG) {
+    public function __construct(?string $logFile = null, string $logLevel = LogLevel::DEBUG, bool $failSafe = true) {
         parent::__construct($logLevel);
 
-        if (is_null($logFile) || !is_writable(dirname($logFile))) {
+        if (is_null($logFile) || ($failSafe && !is_writable(dirname($logFile)))) {
             $logFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'default.log';
         }
 
         $this->logFile = $logFile;
 
         if (!file_exists($logFile)) {
-            $result = @file_put_contents($logFile, "");
-            if ($result === false) {
+            if (@file_put_contents($logFile, "") === false) {
                 $error = error_get_last();
                 $message = $error['message'] ?? 'Unbekannter Fehler beim Erstellen der Logdatei';
                 throw new Exception("Fehler beim Erstellen der Logdatei: " . $message);
@@ -37,11 +36,14 @@ class FileLogger extends LoggerAbstract {
     }
 
     protected function writeLog(string $logEntry, string $level): void {
-        $result = @file_put_contents($this->logFile, $logEntry . PHP_EOL, FILE_APPEND);
-        if ($result === false) {
+        if (@file_put_contents($this->logFile, $logEntry . PHP_EOL, FILE_APPEND) === false) {
             $error = error_get_last();
             $message = $error['message'] ?? 'Unbekannter Fehler beim Schreiben in die Logdatei';
             throw new Exception("Fehler beim Schreiben in die Logdatei: " . $message);
         }
+    }
+
+    public function getLogFile(): string {
+        return $this->logFile;
     }
 }
