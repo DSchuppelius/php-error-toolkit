@@ -11,7 +11,7 @@
 namespace ERRORToolkit\Logger;
 
 use ERRORToolkit\Contracts\Abstracts\LoggerAbstract;
-use ERRORToolkit\Exceptions\FileNotWrittenException;
+use ERRORToolkit\Exceptions\FileSystem\FileNotWrittenException;
 use Psr\Log\LogLevel;
 
 class FileLogger extends LoggerAbstract {

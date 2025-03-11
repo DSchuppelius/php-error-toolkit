@@ -12,11 +12,12 @@ declare(strict_types=1);
 
 namespace ERRORToolkit\Exceptions\FileSystem;
 
+use ERRORToolkit\Exceptions\FileSystemException;
 use Exception;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 
-class FileNotFoundException extends RuntimeException {
+class FileNotFoundException extends FileSystemException {
 
     public function __construct($message = '', int $code = 0, $response = null, ?Exception $previous = null, ?LoggerInterface $logger = null) {
         parent::__construct($message, $code, $response, $previous, $logger);

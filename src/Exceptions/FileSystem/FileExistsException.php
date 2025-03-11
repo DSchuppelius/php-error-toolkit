@@ -12,11 +12,12 @@ declare(strict_types=1);
 
 namespace ERRORToolkit\Exceptions\FileSystem;
 
+use ERRORToolkit\Exceptions\FileSystemException;
 use Exception;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 
-final class FileExistsException extends RuntimeException {
+final class FileExistsException extends FileSystemException {
 
     public function __construct($message = '', int $code = 0, $response = null, ?Exception $previous = null, ?LoggerInterface $logger = null) {
         parent::__construct($message, $code, $response, $previous, $logger);

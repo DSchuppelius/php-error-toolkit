@@ -12,7 +12,6 @@ declare(strict_types=1);
 
 namespace ERRORToolkit\Exceptions\FileSystem;
 
-use ERRORToolkit\Exceptions\FileSystemException;
 use Exception;
 use Psr\Log\LoggerInterface;
 

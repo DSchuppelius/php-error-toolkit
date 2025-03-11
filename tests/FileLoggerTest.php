@@ -8,7 +8,7 @@
  * License Uri  : https://opensource.org/license/mit
  */
 
-use ERRORToolkit\Exceptions\FileNotWrittenException;
+use ERRORToolkit\Exceptions\FileSystem\FileNotWrittenException;
 use PHPUnit\Framework\TestCase;
 use ERRORToolkit\Logger\FileLogger;
 use Psr\Log\LogLevel;
