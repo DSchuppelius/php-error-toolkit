@@ -1,9 +1,9 @@
 <?php
 /*
- * Created on   : Sun Jan 26 2025
+ * Created on   : Tue Mar 11 2025
  * Author       : Daniel Jörg Schuppelius
  * Author Uri   : https://schuppelius.org
- * Filename     : FileNotWrittenException.php
+ * Filename     : FileSystemException.php
  * License      : MIT License
  * License Uri  : https://opensource.org/license/mit
  */
@@ -18,10 +18,10 @@ use Exception;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 
-final class FileNotWrittenException extends RuntimeException {
+class FileSystemException extends RuntimeException {
     use ErrorLog;
 
-    public function __construct($message = '', int $code = 0, $response = null, Exception $previous = null, LoggerInterface $logger = null) {
+    public function __construct($message = '', int $code = 0, $response = null, ?Exception $previous = null, ?LoggerInterface $logger = null) {
         parent::__construct($message, $code, $previous);
         $this->logger = $logger ?? ConsoleLoggerFactory::getLogger();
         $this->logError("$message (Errorcode: $code)" . (empty($content) ? "" : ": " . $content));
