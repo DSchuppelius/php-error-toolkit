@@ -46,6 +46,18 @@ abstract class LoggerAbstract implements LoggerInterface {
         return $levels[$logLevel];
     }
 
+    private function getCallerFunction(): string {
+        $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+
+        foreach ($backtrace as $trace) {
+            if (isset($trace['class']) && !str_starts_with($trace['class'], 'ERRORToolkit')) {
+                return "{$trace['class']}::{$trace['function']}()";
+            }
+        }
+
+        return 'Unbekannt';
+    }
+
     protected function shouldLog(string $level): bool {
         return $this->convertLogLevel($level) <= $this->logLevel;
     }
@@ -84,8 +96,9 @@ abstract class LoggerAbstract implements LoggerInterface {
 
     public function generateLogEntry($level, string|\Stringable $message, array $context = []): string {
         $timestamp = date('Y-m-d H:i:s');
+        $caller = $this->getCallerFunction();
         $contextString = empty($context) ? "" : " " . json_encode($context);
-        return "[{$timestamp}] {$level}: {$message}{$contextString}";
+        return "[{$timestamp}] {$level} [{$caller}]: {$message}{$contextString}";
     }
 
     abstract protected function writeLog(string $logEntry, string $level): void;

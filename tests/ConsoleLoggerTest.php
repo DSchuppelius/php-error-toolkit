@@ -15,6 +15,8 @@ use Psr\Log\LogLevel;
 class ConsoleLoggerTest extends TestCase {
     public function testLogsInfoLevel() {
         $logger = new ConsoleLogger(LogLevel::INFO);
+        $logger->log(LogLevel::INFO, "Multiline Test: Line 1 - This is an info message");
+        $logger->log(LogLevel::INFO, "Multiline Test: Line 2 - This is an info message");
 
         ob_start();
         $logger->log(LogLevel::INFO, "This is an info message");
