@@ -10,79 +10,92 @@
 
 namespace ERRORToolkit\Traits;
 
+use BadMethodCallException;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 
 trait ErrorLog {
-    protected ?LoggerInterface $logger = null;
+    protected static ?LoggerInterface $logger = null;
 
+    /**
+     * PSR-LogLevel für magische Methoden
+     */
     private static array $logLevelMap = [
-        LogLevel::EMERGENCY => LOG_EMERG,
-        LogLevel::ALERT     => LOG_ALERT,
-        LogLevel::CRITICAL  => LOG_CRIT,
-        LogLevel::ERROR     => LOG_ERR,
-        LogLevel::WARNING   => LOG_WARNING,
-        LogLevel::NOTICE    => LOG_NOTICE,
-        LogLevel::INFO      => LOG_INFO,
-        LogLevel::DEBUG     => LOG_DEBUG,
+        'logDebug'     => LogLevel::DEBUG,
+        'logInfo'      => LogLevel::INFO,
+        'logNotice'    => LogLevel::NOTICE,
+        'logWarning'   => LogLevel::WARNING,
+        'logError'     => LogLevel::ERROR,
+        'logCritical'  => LogLevel::CRITICAL,
+        'logAlert'     => LogLevel::ALERT,
+        'logEmergency' => LogLevel::EMERGENCY,
     ];
 
     /**
-     * Setzt einen PSR-3 kompatiblen Logger
+     * Setzt einen PSR-3 kompatiblen Logger (global für statische Nutzung)
      */
-    public function setLogger(LoggerInterface $logger): void {
-        $this->logger = $logger;
+    public static function setLogger(?LoggerInterface $logger = null): void {
+        self::$logger = $logger;
     }
 
     /**
-     * Allgemeine Logging-Funktion mit PSR-3 Kompatibilität.
+     * Allgemeine Logging-Funktion für Instanz- und statische Nutzung
      */
-    private function logMessage(string $level, string $message, array $context = []): void {
-        if ($this->logger) {
-            $this->logger->log($level, $message, $context);
+    private static function logInternal(string $level, string $message, array $context = []): void {
+        if (self::$logger) {
+            self::$logger->log($level, $message, $context);
         } else {
-            $logString = "[" . date('Y-m-d H:i:s') . "] [" . ucfirst($level) . "] $message";
+            // Fallback-Logging
+            $logString = sprintf("[%s] [%s] %s", date('Y-m-d H:i:s'), ucfirst($level), $message);
+
             if (ini_get('error_log')) {
                 error_log($logString);
             } elseif (function_exists('syslog')) {
-                syslog(self::$logLevelMap[$level] ?? LOG_INFO, $message);
+                syslog(self::getSyslogLevel($level), $logString);
             } else {
-                $tempDir = sys_get_temp_dir();
-                $logFile = $tempDir . DIRECTORY_SEPARATOR . "php-config-toolkit.log";
-                file_put_contents($logFile, $logString . PHP_EOL, FILE_APPEND);
+                file_put_contents(sys_get_temp_dir() . "/php-config-toolkit.log", $logString . PHP_EOL, FILE_APPEND);
             }
         }
     }
 
-    protected function logDebug(string $message, array $context = []): void {
-        $this->logMessage(LogLevel::DEBUG, $message, $context);
+    /**
+     * Wandelt PSR-LogLevel in syslog-Level um
+     */
+    private static function getSyslogLevel(string $level): int {
+        return match ($level) {
+            LogLevel::EMERGENCY => LOG_EMERG,
+            LogLevel::ALERT     => LOG_ALERT,
+            LogLevel::CRITICAL  => LOG_CRIT,
+            LogLevel::ERROR     => LOG_ERR,
+            LogLevel::WARNING   => LOG_WARNING,
+            LogLevel::NOTICE    => LOG_NOTICE,
+            LogLevel::INFO      => LOG_INFO,
+            LogLevel::DEBUG     => LOG_DEBUG,
+            default             => LOG_INFO,
+        };
     }
 
-    protected function logInfo(string $message, array $context = []): void {
-        $this->logMessage(LogLevel::INFO, $message, $context);
+    /**
+     * Magische Methode für Instanzmethoden (nicht-statisch)
+     */
+    public function __call(string $name, array $arguments): void {
+        if (isset(self::$logLevelMap[$name])) {
+            array_unshift($arguments, self::$logLevelMap[$name]);
+            self::logInternal(...$arguments);
+        } else {
+            throw new BadMethodCallException("Methode $name existiert nicht in " . __TRAIT__);
+        }
     }
 
-    protected function logNotice(string $message, array $context = []): void {
-        $this->logMessage(LogLevel::NOTICE, $message, $context);
-    }
-
-    protected function logWarning(string $message, array $context = []): void {
-        $this->logMessage(LogLevel::WARNING, $message, $context);
-    }
-
-    protected function logError(string $message, array $context = []): void {
-        $this->logMessage(LogLevel::ERROR, $message, $context);
-    }
-
-    protected function logCritical(string $message, array $context = []): void {
-        $this->logMessage(LogLevel::CRITICAL, $message, $context);
-    }
-
-    protected function logAlert(string $message, array $context = []): void {
-        $this->logMessage(LogLevel::ALERT, $message, $context);
-    }
-
-    protected function logEmergency(string $message, array $context = []): void {
-        $this->logMessage(LogLevel::EMERGENCY, $message, $context);
+    /**
+     * Magische Methode für statische Methoden (statisch)
+     */
+    public static function __callStatic(string $name, array $arguments): void {
+        if (isset(self::$logLevelMap[$name])) {
+            array_unshift($arguments, self::$logLevelMap[$name]);
+            self::logInternal(...$arguments);
+        } else {
+            throw new BadMethodCallException("Methode $name existiert nicht in " . __TRAIT__);
+        }
     }
 }

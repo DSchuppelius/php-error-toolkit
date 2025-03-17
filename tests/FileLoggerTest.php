@@ -108,7 +108,7 @@ class FileLoggerTest extends TestCase {
         $logger = new FileLogger($this->testLogFile, LogLevel::DEBUG);
 
         $this->expectException(FileNotWrittenException::class);
-        $this->expectExceptionMessageMatches("/Fehler beim Schreiben in die Logdatei/");
+        $this->expectExceptionMessageMatches("/Logdatei ist nicht beschreibbar/");
 
         // Versucht in eine Datei zu schreiben, für die keine Schreibrechte bestehen
         $logger->log(LogLevel::ERROR, "Should fail");
