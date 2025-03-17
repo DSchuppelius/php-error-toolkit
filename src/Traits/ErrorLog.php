@@ -31,6 +31,35 @@ trait ErrorLog {
         'logEmergency' => LogLevel::EMERGENCY,
     ];
 
+    private function initializeLogger(?LoggerInterface $logger): void {
+        if (!is_null($logger)) {
+            $this->setLogger($logger);
+            return;
+        }
+
+        $projectName = $this->detectProjectName();
+
+        if (function_exists('openlog')) {
+            openlog($projectName, LOG_PID | LOG_PERROR, defined('LOG_LOCAL0') ? LOG_LOCAL0 : LOG_USER);
+        }
+    }
+
+    /**
+     * Ermittelt den Projektnamen anhand des Namespaces der aufrufenden Klasse.
+     */
+    private function detectProjectName(): string {
+        $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3);
+
+        foreach ($backtrace as $trace) {
+            if (isset($trace['class']) && !str_starts_with($trace['class'], 'ERRORToolkit')) {
+                $namespaceParts = explode('\\', $trace['class']);
+                return $namespaceParts[0]; // Erster Teil des Namespaces als Projektnamen
+            }
+        }
+
+        return 'UnknownProject'; // Fallback, falls nichts gefunden wird
+    }
+
     /**
      * Setzt einen PSR-3 kompatiblen Logger (global für statische Nutzung)
      */
