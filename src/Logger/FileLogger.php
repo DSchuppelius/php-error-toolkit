@@ -22,6 +22,7 @@ class FileLogger extends LoggerAbstract {
     public function __construct(?string $logFile = null, string $logLevel = LogLevel::DEBUG, bool $failSafe = true) {
         parent::__construct($logLevel);
 
+        // Standard-Logdatei, falls die gegebene Datei nicht beschreibbar ist
         if (is_null($logFile) || ($failSafe && (!is_dir(dirname($logFile)) || !is_writable(dirname($logFile))))) {
             $logFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'default.log';
         }
@@ -29,27 +30,39 @@ class FileLogger extends LoggerAbstract {
         $this->logFile = $logFile;
         $logDir = dirname($logFile);
 
+        // Sicherstellen, dass das Verzeichnis existiert
         if (!is_dir($logDir) && !mkdir($logDir, 0777, true) && !is_dir($logDir)) {
             $this->fallbackToConsole("Logverzeichnis konnte nicht erstellt werden: $logDir");
             throw new FileNotWrittenException("Logverzeichnis konnte nicht erstellt werden: $logDir");
         }
 
+        // Sicherstellen, dass die Datei existiert und UTF-8-BOM enthält
         if (!file_exists($logFile)) {
-            if (@file_put_contents($logFile, "") === false) {
+            if (@file_put_contents($logFile, "\xEF\xBB\xBF") === false) { // UTF-8 BOM setzen
                 $this->handleWriteError("Fehler beim Erstellen der Logdatei");
             }
         }
     }
 
     protected function writeLog(string $logEntry, string $level): void {
+        // Log-Eintrag in UTF-8 umwandeln
+        $logEntry = mb_convert_encoding($logEntry . PHP_EOL, 'UTF-8', 'auto');
+
         if (!is_writable($this->logFile)) {
             $this->fallbackToConsole("Logdatei ist nicht beschreibbar: " . $this->logFile);
             throw new FileNotWrittenException("Logdatei ist nicht beschreibbar: " . $this->logFile);
         }
 
-        if (@file_put_contents($this->logFile, $logEntry . PHP_EOL, FILE_APPEND) === false) {
-            clearstatcache(true, $this->logFile); // Cache löschen für zweite Chance
-            if (@file_put_contents($this->logFile, $logEntry . PHP_EOL, FILE_APPEND) === false) {
+        // Stream-Kontext für UTF-8-Schreiben nutzen
+        $context = stream_context_create([
+            'http' => [
+                'header' => "Content-Type: text/plain; charset=UTF-8"
+            ]
+        ]);
+
+        if (@file_put_contents($this->logFile, $logEntry . PHP_EOL, FILE_APPEND, $context) === false) {
+            clearstatcache(true, $this->logFile); // Cache leeren für zweite Chance
+            if (@file_put_contents($this->logFile, $logEntry . PHP_EOL, FILE_APPEND, $context) === false) {
                 $this->handleWriteError("Fehler beim Schreiben in die Logdatei");
             }
         }
