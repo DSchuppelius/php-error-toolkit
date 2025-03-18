@@ -60,9 +60,9 @@ class FileLogger extends LoggerAbstract {
             ]
         ]);
 
-        if (@file_put_contents($this->logFile, $logEntry . PHP_EOL, FILE_APPEND, $context) === false) {
+        if (@file_put_contents($this->logFile, $logEntry, FILE_APPEND, $context) === false) {
             clearstatcache(true, $this->logFile); // Cache leeren für zweite Chance
-            if (@file_put_contents($this->logFile, $logEntry . PHP_EOL, FILE_APPEND, $context) === false) {
+            if (@file_put_contents($this->logFile, $logEntry, FILE_APPEND, $context) === false) {
                 $this->handleWriteError("Fehler beim Schreiben in die Logdatei");
             }
         }
