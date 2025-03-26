@@ -42,14 +42,25 @@ abstract class LoggerAbstract implements LoggerInterface {
         return $levels[$logLevel] ?? throw new InvalidArgumentException("Ungültiges LogLevel: {$logLevel}");
     }
 
-    private static function getCallerFunction(): string {
-        foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS) as $trace) {
-            if (isset($trace['class']) && !str_starts_with($trace['class'], 'ERRORToolkit')) {
+    private static function getCallerFunction(int $logLevel = 0): string {
+        $ignoreFunctions = ['logInternal', '__call', '__callStatic'];
+        $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+
+        foreach (array_slice($backtrace, 1) as $trace) {
+            if (
+                isset($trace['class'], $trace['function']) &&
+                !str_starts_with($trace['class'], 'ERRORToolkit') &&
+                !in_array($trace['function'], $ignoreFunctions, true)
+            ) {
+                if ($logLevel === 7) {
+                    return "{$trace['class']}::{$trace['function']}() in {$trace['file']}:{$trace['line']}";
+                }
                 return "{$trace['class']}::{$trace['function']}()";
             }
         }
         return 'Unbekannt';
     }
+
 
     protected function shouldLog(string $level): bool {
         return self::convertLogLevel($level) <= $this->logLevel;
@@ -66,7 +77,7 @@ abstract class LoggerAbstract implements LoggerInterface {
 
     public function generateLogEntry($level, string|\Stringable $message, array $context = []): string {
         $timestamp = date('Y-m-d H:i:s');
-        $caller = self::getCallerFunction();
+        $caller = self::getCallerFunction($this->logLevel);
         $contextString = empty($context) ? "" : " " . json_encode($context);
         return "[{$timestamp}] {$level} [{$caller}]: {$message}{$contextString}";
     }
