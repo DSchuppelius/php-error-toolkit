@@ -13,6 +13,7 @@ declare(strict_types=1);
 namespace ERRORToolkit\Traits;
 
 use BadMethodCallException;
+use ERRORToolkit\LoggerRegistry;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 
@@ -66,13 +67,22 @@ trait ErrorLog {
      * Setzt einen PSR-3 kompatiblen Logger (global für statische Nutzung)
      */
     public static function setLogger(?LoggerInterface $logger = null): void {
-        self::$logger = $logger;
+        if (is_null($logger)) {
+            self::$logger = LoggerRegistry::getLogger();
+        } else {
+            self::$logger = $logger;
+            LoggerRegistry::setLogger($logger);
+        }
     }
 
     /**
      * Allgemeine Logging-Funktion für Instanz- und statische Nutzung
      */
     private static function logInternal(string $level, string $message, array $context = []): void {
+        if (is_null(self::$logger)) {
+            self::$logger = LoggerRegistry::getLogger();
+        }
+
         if (self::$logger) {
             self::$logger->log($level, $message, $context);
         } else {
