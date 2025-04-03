@@ -8,6 +8,8 @@
  * License Uri  : https://opensource.org/license/mit
  */
 
+declare(strict_types=1);
+
 namespace ERRORToolkit\Logger;
 
 use ERRORToolkit\Contracts\Abstracts\LoggerAbstract;
