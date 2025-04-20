@@ -24,4 +24,12 @@ class LoggerRegistry {
     public static function getLogger(): ?LoggerInterface {
         return self::$logger;
     }
+
+    public static function resetLogger(): void {
+        self::$logger = null;
+    }
+
+    public static function hasLogger(): bool {
+        return !is_null(self::$logger);
+    }
 }

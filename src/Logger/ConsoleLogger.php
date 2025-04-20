@@ -13,7 +13,9 @@ declare(strict_types=1);
 namespace ERRORToolkit\Logger;
 
 use ERRORToolkit\Contracts\Abstracts\LoggerAbstract;
+use ERRORToolkit\Helper\TerminalHelper;
 use Psr\Log\LogLevel;
+use Stringable;
 
 class ConsoleLogger extends LoggerAbstract {
 
@@ -36,11 +38,19 @@ class ConsoleLogger extends LoggerAbstract {
 
     protected function writeLog(string $logEntry, string $level): void {
         $color = $this->levelColors[strtolower($level)] ?? $this->resetColor;
+        $output = $color . $logEntry . $this->resetColor;
+        if (TerminalHelper::isTerminal()) {
+            if (TerminalHelper::getCursorColumn() > 0) {
+                echo PHP_EOL;
+            }
 
-        echo PHP_EOL . $color . $logEntry . $this->resetColor;
+            echo $output . PHP_EOL;
+        } else {
+            echo PHP_EOL . $output;
+        }
     }
 
-    public function log($level, string|\Stringable $message, array $context = []): void {
+    public function log($level, string|Stringable $message, array $context = []): void {
         if ($this->shouldLog($level)) {
             $logEntry = $this->generateLogEntry($level, $message, $context);
 
