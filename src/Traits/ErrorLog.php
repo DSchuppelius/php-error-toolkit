@@ -43,7 +43,7 @@ trait ErrorLog {
     /**
      * Ermittelt den Projektnamen anhand des Namespaces der aufrufenden Klasse.
      */
-    private function detectProjectName(): string {
+    private static function detectProjectName(): string {
         $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3);
 
         foreach ($backtrace as $trace) {
@@ -80,8 +80,7 @@ trait ErrorLog {
             self::$logger->log($level, $message, $context);
         } else {
             // Fallback-Logging
-            $projectName = self::detectProjectName();
-            openlog($projectName, LOG_PID | LOG_PERROR, defined('LOG_LOCAL0') ? LOG_LOCAL0 : LOG_USER);
+            openlog(self::detectProjectName(), LOG_PID | LOG_PERROR, defined('LOG_LOCAL0') ? LOG_LOCAL0 : LOG_USER);
 
             $logString = sprintf("[%s] [%s] %s", date('Y-m-d H:i:s'), ucfirst($level), $message);
 
