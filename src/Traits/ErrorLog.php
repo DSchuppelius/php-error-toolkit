@@ -37,13 +37,6 @@ trait ErrorLog {
     private function initializeLogger(?LoggerInterface $logger): void {
         if (!is_null($logger)) {
             $this->setLogger($logger);
-            return;
-        }
-
-        $projectName = $this->detectProjectName();
-
-        if (function_exists('openlog')) {
-            openlog($projectName, LOG_PID | LOG_PERROR, defined('LOG_LOCAL0') ? LOG_LOCAL0 : LOG_USER);
         }
     }
 
@@ -87,6 +80,9 @@ trait ErrorLog {
             self::$logger->log($level, $message, $context);
         } else {
             // Fallback-Logging
+            $projectName = self::detectProjectName();
+            openlog($projectName, LOG_PID | LOG_PERROR, defined('LOG_LOCAL0') ? LOG_LOCAL0 : LOG_USER);
+
             $logString = sprintf("[%s] [%s] %s", date('Y-m-d H:i:s'), ucfirst($level), $message);
 
             if (ini_get('error_log')) {
@@ -94,8 +90,9 @@ trait ErrorLog {
             } elseif (function_exists('syslog')) {
                 syslog(self::getSyslogLevel($level), $logString);
             } else {
-                file_put_contents(sys_get_temp_dir() . "/php-config-toolkit.log", $logString . PHP_EOL, FILE_APPEND);
+                file_put_contents(sys_get_temp_dir() . "/php-error-toolkit.log", $logString . PHP_EOL, FILE_APPEND);
             }
+            closelog();
         }
     }
 
