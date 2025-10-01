@@ -20,8 +20,10 @@ use Psr\Log\LogLevel;
 class FileLogger extends LoggerAbstract {
     protected string $logFile;
     protected bool $isLoggingError = false;
+    protected int $maxFileSize; // in Bytes
+    protected bool $rotateLogs; // ob ein Archiv erstellt werden soll
 
-    public function __construct(?string $logFile = null, string $logLevel = LogLevel::DEBUG, bool $failSafe = true) {
+    public function __construct(?string $logFile = null, string $logLevel = LogLevel::DEBUG, bool $failSafe = true, int $maxFileSize = 5000000, bool $rotateLogs = true) {
         parent::__construct($logLevel);
 
         // Standard-Logdatei, falls die gegebene Datei nicht beschreibbar ist
@@ -30,6 +32,9 @@ class FileLogger extends LoggerAbstract {
         }
 
         $this->logFile = $logFile;
+        $this->maxFileSize = $maxFileSize;
+        $this->rotateLogs = $rotateLogs;
+
         $logDir = dirname($logFile);
 
         // Sicherstellen, dass das Verzeichnis existiert
@@ -50,6 +55,11 @@ class FileLogger extends LoggerAbstract {
         // Log-Eintrag in UTF-8 umwandeln
         $logEntry = mb_convert_encoding($logEntry . PHP_EOL, 'UTF-8', 'auto');
 
+        // Prüfen auf maximale Dateigröße
+        if (file_exists($this->logFile) && filesize($this->logFile) >= $this->maxFileSize) {
+            $this->rotateLogFile();
+        }
+
         if (!is_writable($this->logFile)) {
             $this->fallbackToConsole("Logdatei ist nicht beschreibbar: " . $this->logFile);
             throw new FileNotWrittenException("Logdatei ist nicht beschreibbar: " . $this->logFile);
@@ -66,6 +76,28 @@ class FileLogger extends LoggerAbstract {
             clearstatcache(true, $this->logFile); // Cache leeren für zweite Chance
             if (@file_put_contents($this->logFile, $logEntry, FILE_APPEND, $context) === false) {
                 $this->handleWriteError("Fehler beim Schreiben in die Logdatei");
+            }
+        }
+    }
+
+
+    public function getMaxFileSize(): int {
+        return $this->maxFileSize;
+    }
+
+    public function setMaxFileSize(int $bytes): void {
+        $this->maxFileSize = $bytes;
+    }
+
+    private function rotateLogFile(): void {
+        if ($this->rotateLogs) {
+            $archiveFile = $this->logFile . '.' . date('Ymd_His');
+            if (!@rename($this->logFile, $archiveFile)) {
+                $this->handleWriteError("Fehler beim Rotieren der Logdatei");
+            }
+        } else {
+            if (!@file_put_contents($this->logFile, "\xEF\xBB\xBF") === false) {
+                $this->handleWriteError("Fehler beim Leeren der Logdatei");
             }
         }
     }
