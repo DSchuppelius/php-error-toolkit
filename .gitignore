@@ -414,3 +414,6 @@ yarn-error.log
 
 # Schuppe
 /.samples/postman_config.json
+/.settings/
+/.buildpath
+/.project
