@@ -8,6 +8,10 @@
  * License Uri  : https://opensource.org/license/mit
  */
 
+declare(strict_types=1);
+
+namespace Tests;
+
 use PHPUnit\Framework\TestCase;
 use ERRORToolkit\Logger\ConsoleLogger;
 use Psr\Log\LogLevel;

@@ -34,8 +34,7 @@
     "prettier.requireConfig": true,
     "editor.unicodeHighlight.nonBasicASCII": false,
     "phpunit.phpunit": "vendor\\bin\\phpunit.bat",
-    "phpunit.environment": {
-    },
+    "phpunit.clearOutputOnRun": true,
     "remote.autoForwardPortsSource": "hybrid",
     "git.replaceTagsWhenPull": true,
     "notebook.formatOnSave.enabled": true,
