@@ -37,13 +37,17 @@ class ConsoleLogger extends LoggerAbstract {
     }
 
     protected function writeLog(string $logEntry, string $level): void {
-        $color = $this->levelColors[strtolower($level)] ?? $this->resetColor;
-        $output = $color . $logEntry . $this->resetColor;
+        if (TerminalHelper::supportsColors()) {
+            $color = $this->levelColors[strtolower($level)] ?? $this->resetColor;
+            $output = $color . $logEntry . $this->resetColor;
+        } else {
+            $output = $logEntry;
+        }
+
         if (TerminalHelper::isTerminal()) {
-            if (TerminalHelper::getCursorColumn() > 0) {
+            if (!TerminalHelper::isNewline()) {
                 echo PHP_EOL;
             }
-
             echo $output . PHP_EOL;
         } else {
             echo PHP_EOL . $output;
