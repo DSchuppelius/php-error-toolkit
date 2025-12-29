@@ -143,9 +143,13 @@ Supports all PSR-3 log levels with integer-based filtering:
 - `INFO` (6) - Informational messages
 - `DEBUG` (7) - Debug-level messages
 
-## Magic Methods via Trait
+## ErrorLog Trait Features
 
-The `ErrorLog` trait provides convenient magic methods:
+The `ErrorLog` trait provides comprehensive logging capabilities with multiple advanced features:
+
+### Magic Methods
+
+All PSR-3 log levels are available as magic methods:
 
 ```php
 use ERRORToolkit\Traits\ErrorLog;
@@ -154,7 +158,7 @@ class MyClass {
     use ErrorLog;
 
     public function example() {
-        // These methods are automatically available
+        // Instance methods - these methods are automatically available
         $this->logDebug('Debug message');
         $this->logInfo('Info message');
         $this->logNotice('Notice message');
@@ -163,10 +167,13 @@ class MyClass {
         $this->logCritical('Critical message');
         $this->logAlert('Alert message');
         $this->logEmergency('Emergency message');
+        
+        // All methods support context arrays
+        $this->logError('Database error', ['table' => 'users', 'id' => 123]);
     }
 
     public static function staticExample() {
-        // All static magic methods are available
+        // Static methods - all static magic methods are available
         self::logDebug('Static debug message');
         self::logInfo('Static info message');
         self::logNotice('Static notice message');
@@ -175,6 +182,102 @@ class MyClass {
         self::logCritical('Static critical message');
         self::logAlert('Static alert message');
         self::logEmergency('Static emergency message');
+        
+        // Static methods also support context
+        self::logInfo('User action', ['user' => 'admin', 'action' => 'login']);
+    }
+}
+```
+
+### Logger Management
+
+The trait provides flexible logger management:
+
+```php
+use ERRORToolkit\Traits\ErrorLog;
+use ERRORToolkit\Factories\FileLoggerFactory;
+
+class MyService {
+    use ErrorLog;
+    
+    public function __construct() {
+        // Set a specific logger for this class
+        self::setLogger(FileLoggerFactory::getLogger('service.log'));
+        
+        // Or use global logger from registry (automatic fallback)
+        self::setLogger(); // Uses LoggerRegistry::getLogger()
+    }
+}
+```
+
+### Automatic Project Detection
+
+The trait automatically detects project names from class namespaces:
+
+```php
+namespace MyCompany\ProjectName\Services;
+
+use ERRORToolkit\Traits\ErrorLog;
+
+class UserService {
+    use ErrorLog;
+    
+    public function process() {
+        // Project name "MyCompany" is automatically detected
+        // Log entry: [2025-12-29 10:30:00] info [MyCompany::UserService::process()]: Processing user
+        $this->logInfo('Processing user');
+    }
+}
+```
+
+### Fallback Logging System
+
+When no logger is available, the trait provides intelligent fallbacks:
+
+1. **Primary**: Uses configured PSR-3 logger
+2. **Fallback 1**: PHP error_log() if configured
+3. **Fallback 2**: System syslog with project-specific facility
+4. **Fallback 3**: File logging to system temp directory
+
+```php
+class EmergencyService {
+    use ErrorLog;
+    
+    public function criticalOperation() {
+        // Even without explicit logger setup, this will work
+        // Falls back through: error_log → syslog → temp file
+        self::logEmergency('System failure detected');
+    }
+}
+```
+
+### Context Support
+
+All logging methods support PSR-3 context arrays:
+
+```php
+class ApiService {
+    use ErrorLog;
+    
+    public function handleRequest($request) {
+        $context = [
+            'method' => $request->method,
+            'url' => $request->url,
+            'user_id' => $request->user?->id,
+            'timestamp' => time()
+        ];
+        
+        $this->logInfo('API request received', $context);
+        
+        try {
+            // Process request
+        } catch (Exception $e) {
+            $this->logError('API request failed', [
+                ...$context,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
     }
 }
 ```
