@@ -53,7 +53,7 @@ abstract class LoggerAbstract implements LoggerInterface {
                 !in_array($trace['function'], $ignoreFunctions, true)
             ) {
                 if ($logLevel === 7) {
-                    $file = $trace['file'] ?? 'unknown';
+                    $file = $trace['file'] ?? 'Unbekannt';
                     $line = $trace['line'] ?? 0;
                     return "{$trace['class']}::{$trace['function']}() in {$file}:{$line}";
                 }
