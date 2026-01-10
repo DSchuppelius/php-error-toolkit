@@ -18,6 +18,49 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 use Throwable;
 
+/**
+ * ErrorLog Trait - Provides convenient logging methods via magic methods.
+ * 
+ * Logging methods (return void):
+ * @method void logDebug(string $message, array $context = [])
+ * @method void logInfo(string $message, array $context = [])
+ * @method void logNotice(string $message, array $context = [])
+ * @method void logWarning(string $message, array $context = [])
+ * @method void logError(string $message, array $context = [])
+ * @method void logCritical(string $message, array $context = [])
+ * @method void logAlert(string $message, array $context = [])
+ * @method void logEmergency(string $message, array $context = [])
+ * 
+ * Static logging methods (return void):
+ * @method static void logDebug(string $message, array $context = [])
+ * @method static void logInfo(string $message, array $context = [])
+ * @method static void logNotice(string $message, array $context = [])
+ * @method static void logWarning(string $message, array $context = [])
+ * @method static void logError(string $message, array $context = [])
+ * @method static void logCritical(string $message, array $context = [])
+ * @method static void logAlert(string $message, array $context = [])
+ * @method static void logEmergency(string $message, array $context = [])
+ * 
+ * Log-and-throw methods (return never, always throw):
+ * @method never logDebugAndThrow(class-string<Throwable> $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
+ * @method never logInfoAndThrow(class-string<Throwable> $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
+ * @method never logNoticeAndThrow(class-string<Throwable> $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
+ * @method never logWarningAndThrow(class-string<Throwable> $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
+ * @method never logErrorAndThrow(class-string<Throwable> $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
+ * @method never logCriticalAndThrow(class-string<Throwable> $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
+ * @method never logAlertAndThrow(class-string<Throwable> $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
+ * @method never logEmergencyAndThrow(class-string<Throwable> $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
+ * 
+ * Static log-and-throw methods (return never, always throw):
+ * @method static never logDebugAndThrow(class-string<Throwable> $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
+ * @method static never logInfoAndThrow(class-string<Throwable> $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
+ * @method static never logNoticeAndThrow(class-string<Throwable> $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
+ * @method static never logWarningAndThrow(class-string<Throwable> $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
+ * @method static never logErrorAndThrow(class-string<Throwable> $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
+ * @method static never logCriticalAndThrow(class-string<Throwable> $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
+ * @method static never logAlertAndThrow(class-string<Throwable> $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
+ * @method static never logEmergencyAndThrow(class-string<Throwable> $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
+ */
 trait ErrorLog {
     protected static ?LoggerInterface $logger = null;
 
