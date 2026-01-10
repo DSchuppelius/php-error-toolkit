@@ -17,7 +17,6 @@ use Closure;
 use ERRORToolkit\LoggerRegistry;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
-use RuntimeException;
 use Throwable;
 
 /**
@@ -324,6 +323,16 @@ trait ErrorLog {
     }
 
     /**
+     * Suffix-Map für Magic-Method-Typen
+     */
+    private static array $methodSuffixMap = [
+        'If'        => ['length' => 2, 'type' => 'if'],
+        'Unless'    => ['length' => 6, 'type' => 'unless'],
+        'AndReturn' => ['length' => 9, 'type' => 'andReturn'],
+        'WithTimer' => ['length' => 9, 'type' => 'withTimer'],
+    ];
+
+    /**
      * Parst den Methodennamen und gibt das Log-Level sowie den Methodentyp zurück.
      * Unterstützt: log{Level}, log{Level}If, log{Level}Unless, log{Level}AndReturn, log{Level}WithTimer
      * 
@@ -336,32 +345,13 @@ trait ErrorLog {
 
         $suffix = substr($name, 3); // Entferne 'log' Präfix
 
-        // Prüfe auf log{Level}If
-        if (str_ends_with($suffix, 'If')) {
-            $levelName = substr($suffix, 0, -2);
-            $level = self::$logLevelMap[$levelName] ?? null;
-            return $level !== null ? ['level' => $level, 'type' => 'if'] : null;
-        }
-
-        // Prüfe auf log{Level}Unless
-        if (str_ends_with($suffix, 'Unless')) {
-            $levelName = substr($suffix, 0, -6);
-            $level = self::$logLevelMap[$levelName] ?? null;
-            return $level !== null ? ['level' => $level, 'type' => 'unless'] : null;
-        }
-
-        // Prüfe auf log{Level}AndReturn
-        if (str_ends_with($suffix, 'AndReturn')) {
-            $levelName = substr($suffix, 0, -9);
-            $level = self::$logLevelMap[$levelName] ?? null;
-            return $level !== null ? ['level' => $level, 'type' => 'andReturn'] : null;
-        }
-
-        // Prüfe auf log{Level}WithTimer
-        if (str_ends_with($suffix, 'WithTimer')) {
-            $levelName = substr($suffix, 0, -9);
-            $level = self::$logLevelMap[$levelName] ?? null;
-            return $level !== null ? ['level' => $level, 'type' => 'withTimer'] : null;
+        // Prüfe bekannte Suffixe
+        foreach (self::$methodSuffixMap as $methodSuffix => $config) {
+            if (str_ends_with($suffix, $methodSuffix)) {
+                $levelName = substr($suffix, 0, -$config['length']);
+                $level = self::$logLevelMap[$levelName] ?? null;
+                return $level !== null ? ['level' => $level, 'type' => $config['type']] : null;
+            }
         }
 
         // Standard log{Level}
@@ -372,16 +362,16 @@ trait ErrorLog {
     /**
      * Magische Methode für Instanzmethoden (nicht-statisch)
      * 
-     * Unterstützt: log{Level}(string $message, array $context = [])
+     * Unterstützt: log{Level}, log{Level}If, log{Level}Unless, log{Level}AndReturn, log{Level}WithTimer
      */
     public function __call(string $name, array $arguments): mixed {
         return self::handleMagicCall($name, $arguments);
     }
 
     /**
-     * Magische Methode für statische Methoden (statisch)
+     * Magische Methode für statische Methoden
      * 
-     * Unterstützt: log{Level}(string $message, array $context = [])
+     * Unterstützt: log{Level}, log{Level}If, log{Level}Unless, log{Level}AndReturn, log{Level}WithTimer
      */
     public static function __callStatic(string $name, array $arguments): mixed {
         return self::handleMagicCall($name, $arguments);
@@ -393,84 +383,83 @@ trait ErrorLog {
     private static function handleMagicCall(string $name, array $arguments): mixed {
         $parsed = self::parseMethodName($name);
 
-        if ($parsed !== null) {
-            $level = $parsed['level'];
-            $type = $parsed['type'];
-
-            switch ($type) {
-                case 'if':
-                    // log{Level}If(bool $condition, string $message, array $context = [])
-                    $condition = $arguments[0] ?? false;
-                    if ($condition) {
-                        $message = $arguments[1] ?? '';
-                        $context = $arguments[2] ?? [];
-                        self::logInternal($level, $message, $context);
-                    }
-                    return null;
-
-                case 'unless':
-                    // log{Level}Unless(bool $condition, string $message, array $context = [])
-                    $condition = $arguments[0] ?? false;
-                    if (!$condition) {
-                        $message = $arguments[1] ?? '';
-                        $context = $arguments[2] ?? [];
-                        self::logInternal($level, $message, $context);
-                    }
-                    return null;
-
-                case 'andReturn':
-                    // log{Level}AndReturn(mixed $value, string $message, array $context = [])
-                    $value = $arguments[0] ?? null;
-                    $message = $arguments[1] ?? '';
-                    $context = $arguments[2] ?? [];
-                    self::logInternal($level, $message, $context);
-                    return $value;
-
-                case 'withTimer':
-                    // log{Level}WithTimer(Closure $callback, string $description)
-                    $callback = $arguments[0] ?? null;
-                    $description = $arguments[1] ?? '';
-
-                    if (!$callback instanceof Closure) {
-                        throw new BadMethodCallException("Erstes Argument muss eine Closure sein");
-                    }
-
-                    $startTime = hrtime(true);
-
-                    try {
-                        $result = $callback();
-                        $duration = (hrtime(true) - $startTime) / 1_000_000;
-
-                        self::logInternal($level, sprintf(
-                            "%s completed in %.2f ms",
-                            $description,
-                            $duration
-                        ));
-
-                        return $result;
-                    } catch (Throwable $e) {
-                        $duration = (hrtime(true) - $startTime) / 1_000_000;
-
-                        self::logInternal(LogLevel::ERROR, sprintf(
-                            "%s failed after %.2f ms: %s",
-                            $description,
-                            $duration,
-                            $e->getMessage()
-                        ), self::extractExceptionContext($e));
-
-                        throw $e;
-                    }
-
-                case 'standard':
-                default:
-                    // log{Level}(string $message, array $context = [])
-                    array_unshift($arguments, $level);
-                    self::logInternal(...$arguments);
-                    return null;
-            }
+        if ($parsed === null) {
+            throw new BadMethodCallException("Methode $name existiert nicht in " . __TRAIT__);
         }
 
-        throw new BadMethodCallException("Methode $name existiert nicht in " . __TRAIT__);
+        $level = $parsed['level'];
+
+        return match ($parsed['type']) {
+            'if' => self::handleConditionalLog(true, $level, $arguments),
+            'unless' => self::handleConditionalLog(false, $level, $arguments),
+            'andReturn' => self::handleLogAndReturn($level, $arguments),
+            'withTimer' => self::handleLogWithTimer($level, $arguments),
+            default => self::handleStandardLog($level, $arguments),
+        };
+    }
+
+    /**
+     * Verarbeitet bedingte Log-Aufrufe (If/Unless)
+     */
+    private static function handleConditionalLog(bool $logWhenTrue, string $level, array $arguments): null {
+        $condition = $arguments[0] ?? false;
+        $shouldLog = $logWhenTrue ? $condition : !$condition;
+
+        if ($shouldLog) {
+            self::logInternal($level, $arguments[1] ?? '', $arguments[2] ?? []);
+        }
+
+        return null;
+    }
+
+    /**
+     * Verarbeitet Log-and-Return Aufrufe
+     */
+    private static function handleLogAndReturn(string $level, array $arguments): mixed {
+        $value = $arguments[0] ?? null;
+        self::logInternal($level, $arguments[1] ?? '', $arguments[2] ?? []);
+        return $value;
+    }
+
+    /**
+     * Verarbeitet Log-with-Timer Aufrufe
+     */
+    private static function handleLogWithTimer(string $level, array $arguments): mixed {
+        $callback = $arguments[0] ?? null;
+        $description = $arguments[1] ?? '';
+
+        if (!$callback instanceof Closure) {
+            throw new BadMethodCallException("Erstes Argument muss eine Closure sein");
+        }
+
+        $startTime = hrtime(true);
+
+        try {
+            $result = $callback();
+            $duration = (hrtime(true) - $startTime) / 1_000_000;
+
+            self::logInternal($level, sprintf("%s completed in %.2f ms", $description, $duration));
+
+            return $result;
+        } catch (Throwable $e) {
+            $duration = (hrtime(true) - $startTime) / 1_000_000;
+
+            self::logInternal(
+                LogLevel::ERROR,
+                sprintf("%s failed after %.2f ms: %s", $description, $duration, $e->getMessage()),
+                self::extractExceptionContext($e)
+            );
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Verarbeitet Standard-Log Aufrufe
+     */
+    private static function handleStandardLog(string $level, array $arguments): null {
+        self::logInternal($level, $arguments[0] ?? '', $arguments[1] ?? []);
+        return null;
     }
 
     // ========================================================================
