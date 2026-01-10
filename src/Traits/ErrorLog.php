@@ -16,6 +16,7 @@ use BadMethodCallException;
 use ERRORToolkit\LoggerRegistry;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
+use Throwable;
 
 trait ErrorLog {
     protected static ?LoggerInterface $logger = null;
@@ -24,14 +25,14 @@ trait ErrorLog {
      * PSR-LogLevel für magische Methoden
      */
     private static array $logLevelMap = [
-        'logDebug'     => LogLevel::DEBUG,
-        'logInfo'      => LogLevel::INFO,
-        'logNotice'    => LogLevel::NOTICE,
-        'logWarning'   => LogLevel::WARNING,
-        'logError'     => LogLevel::ERROR,
-        'logCritical'  => LogLevel::CRITICAL,
-        'logAlert'     => LogLevel::ALERT,
-        'logEmergency' => LogLevel::EMERGENCY,
+        'Debug'     => LogLevel::DEBUG,
+        'Info'      => LogLevel::INFO,
+        'Notice'    => LogLevel::NOTICE,
+        'Warning'   => LogLevel::WARNING,
+        'Error'     => LogLevel::ERROR,
+        'Critical'  => LogLevel::CRITICAL,
+        'Alert'     => LogLevel::ALERT,
+        'Emergency' => LogLevel::EMERGENCY,
     ];
 
     private function initializeLogger(?LoggerInterface $logger): void {
@@ -113,26 +114,111 @@ trait ErrorLog {
     }
 
     /**
-     * Magische Methode für Instanzmethoden (nicht-statisch)
+     * Parst den Methodennamen und gibt das Log-Level sowie den Suffix zurück.
+     * Unterstützt: log{Level} und log{Level}AndThrow
+     * 
+     * @return array{level: string, andThrow: bool}|null
      */
-    public function __call(string $name, array $arguments): void {
-        if (isset(self::$logLevelMap[$name])) {
-            array_unshift($arguments, self::$logLevelMap[$name]);
-            self::logInternal(...$arguments);
-        } else {
-            throw new BadMethodCallException("Methode $name existiert nicht in " . __TRAIT__);
+    private static function parseMethodName(string $name): ?array {
+        if (!str_starts_with($name, 'log')) {
+            return null;
         }
+
+        $suffix = substr($name, 3); // Entferne 'log' Präfix
+        $andThrow = false;
+
+        if (str_ends_with($suffix, 'AndThrow')) {
+            $andThrow = true;
+            $suffix = substr($suffix, 0, -8); // Entferne 'AndThrow' Suffix
+        }
+
+        if (isset(self::$logLevelMap[$suffix])) {
+            return [
+                'level' => self::$logLevelMap[$suffix],
+                'andThrow' => $andThrow,
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * Magische Methode für Instanzmethoden (nicht-statisch)
+     * 
+     * Unterstützt:
+     * - log{Level}(string $message, array $context = [])
+     * - log{Level}AndThrow(string $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
+     */
+    public function __call(string $name, array $arguments): mixed {
+        $parsed = self::parseMethodName($name);
+
+        if ($parsed !== null) {
+            if ($parsed['andThrow']) {
+                return $this->handleLogAndThrow($parsed['level'], $arguments);
+            }
+
+            array_unshift($arguments, $parsed['level']);
+            self::logInternal(...$arguments);
+            return null;
+        }
+
+        throw new BadMethodCallException("Methode $name existiert nicht in " . __TRAIT__);
     }
 
     /**
      * Magische Methode für statische Methoden (statisch)
+     * 
+     * Unterstützt:
+     * - log{Level}(string $message, array $context = [])
+     * - log{Level}AndThrow(string $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
      */
-    public static function __callStatic(string $name, array $arguments): void {
-        if (isset(self::$logLevelMap[$name])) {
-            array_unshift($arguments, self::$logLevelMap[$name]);
+    public static function __callStatic(string $name, array $arguments): mixed {
+        $parsed = self::parseMethodName($name);
+
+        if ($parsed !== null) {
+            if ($parsed['andThrow']) {
+                return self::handleLogAndThrowStatic($parsed['level'], $arguments);
+            }
+
+            array_unshift($arguments, $parsed['level']);
             self::logInternal(...$arguments);
-        } else {
-            throw new BadMethodCallException("Methode $name existiert nicht in " . __TRAIT__);
+            return null;
         }
+
+        throw new BadMethodCallException("Methode $name existiert nicht in " . __TRAIT__);
+    }
+
+    /**
+     * Interne Hilfsmethode für logAndThrow via magische Methode (Instanz)
+     * 
+     * @param string $level PSR-LogLevel
+     * @param array $arguments [exceptionClass, message, context?, previous?]
+     * @return never
+     */
+    private function handleLogAndThrow(string $level, array $arguments): never {
+        $exceptionClass = $arguments[0] ?? \RuntimeException::class;
+        $message = $arguments[1] ?? '';
+        $context = $arguments[2] ?? [];
+        $previous = $arguments[3] ?? null;
+
+        self::logInternal($level, $message, $context);
+        throw new $exceptionClass($message, 0, $previous);
+    }
+
+    /**
+     * Interne Hilfsmethode für logAndThrow via magische Methode (statisch)
+     * 
+     * @param string $level PSR-LogLevel
+     * @param array $arguments [exceptionClass, message, context?, previous?]
+     * @return never
+     */
+    private static function handleLogAndThrowStatic(string $level, array $arguments): never {
+        $exceptionClass = $arguments[0] ?? \RuntimeException::class;
+        $message = $arguments[1] ?? '';
+        $context = $arguments[2] ?? [];
+        $previous = $arguments[3] ?? null;
+
+        self::logInternal($level, $message, $context);
+        throw new $exceptionClass($message, 0, $previous);
     }
 }
