@@ -42,6 +42,86 @@ use Throwable;
  * @method static void logCritical(string $message, array $context = [])
  * @method static void logAlert(string $message, array $context = [])
  * @method static void logEmergency(string $message, array $context = [])
+ * 
+ * Conditional logging methods (log if condition is true):
+ * @method void logDebugIf(bool $condition, string $message, array $context = [])
+ * @method void logInfoIf(bool $condition, string $message, array $context = [])
+ * @method void logNoticeIf(bool $condition, string $message, array $context = [])
+ * @method void logWarningIf(bool $condition, string $message, array $context = [])
+ * @method void logErrorIf(bool $condition, string $message, array $context = [])
+ * @method void logCriticalIf(bool $condition, string $message, array $context = [])
+ * @method void logAlertIf(bool $condition, string $message, array $context = [])
+ * @method void logEmergencyIf(bool $condition, string $message, array $context = [])
+ * 
+ * Static conditional logging methods (log if condition is true):
+ * @method static void logDebugIf(bool $condition, string $message, array $context = [])
+ * @method static void logInfoIf(bool $condition, string $message, array $context = [])
+ * @method static void logNoticeIf(bool $condition, string $message, array $context = [])
+ * @method static void logWarningIf(bool $condition, string $message, array $context = [])
+ * @method static void logErrorIf(bool $condition, string $message, array $context = [])
+ * @method static void logCriticalIf(bool $condition, string $message, array $context = [])
+ * @method static void logAlertIf(bool $condition, string $message, array $context = [])
+ * @method static void logEmergencyIf(bool $condition, string $message, array $context = [])
+ * 
+ * Conditional logging methods (log if condition is false):
+ * @method void logDebugUnless(bool $condition, string $message, array $context = [])
+ * @method void logInfoUnless(bool $condition, string $message, array $context = [])
+ * @method void logNoticeUnless(bool $condition, string $message, array $context = [])
+ * @method void logWarningUnless(bool $condition, string $message, array $context = [])
+ * @method void logErrorUnless(bool $condition, string $message, array $context = [])
+ * @method void logCriticalUnless(bool $condition, string $message, array $context = [])
+ * @method void logAlertUnless(bool $condition, string $message, array $context = [])
+ * @method void logEmergencyUnless(bool $condition, string $message, array $context = [])
+ * 
+ * Static conditional logging methods (log if condition is false):
+ * @method static void logDebugUnless(bool $condition, string $message, array $context = [])
+ * @method static void logInfoUnless(bool $condition, string $message, array $context = [])
+ * @method static void logNoticeUnless(bool $condition, string $message, array $context = [])
+ * @method static void logWarningUnless(bool $condition, string $message, array $context = [])
+ * @method static void logErrorUnless(bool $condition, string $message, array $context = [])
+ * @method static void logCriticalUnless(bool $condition, string $message, array $context = [])
+ * @method static void logAlertUnless(bool $condition, string $message, array $context = [])
+ * @method static void logEmergencyUnless(bool $condition, string $message, array $context = [])
+ * 
+ * Log and return methods (log message and return value):
+ * @method mixed logDebugAndReturn(mixed $value, string $message, array $context = [])
+ * @method mixed logInfoAndReturn(mixed $value, string $message, array $context = [])
+ * @method mixed logNoticeAndReturn(mixed $value, string $message, array $context = [])
+ * @method mixed logWarningAndReturn(mixed $value, string $message, array $context = [])
+ * @method mixed logErrorAndReturn(mixed $value, string $message, array $context = [])
+ * @method mixed logCriticalAndReturn(mixed $value, string $message, array $context = [])
+ * @method mixed logAlertAndReturn(mixed $value, string $message, array $context = [])
+ * @method mixed logEmergencyAndReturn(mixed $value, string $message, array $context = [])
+ * 
+ * Static log and return methods:
+ * @method static mixed logDebugAndReturn(mixed $value, string $message, array $context = [])
+ * @method static mixed logInfoAndReturn(mixed $value, string $message, array $context = [])
+ * @method static mixed logNoticeAndReturn(mixed $value, string $message, array $context = [])
+ * @method static mixed logWarningAndReturn(mixed $value, string $message, array $context = [])
+ * @method static mixed logErrorAndReturn(mixed $value, string $message, array $context = [])
+ * @method static mixed logCriticalAndReturn(mixed $value, string $message, array $context = [])
+ * @method static mixed logAlertAndReturn(mixed $value, string $message, array $context = [])
+ * @method static mixed logEmergencyAndReturn(mixed $value, string $message, array $context = [])
+ * 
+ * Log with timer methods (execute callback and log duration):
+ * @method mixed logDebugWithTimer(Closure $callback, string $description)
+ * @method mixed logInfoWithTimer(Closure $callback, string $description)
+ * @method mixed logNoticeWithTimer(Closure $callback, string $description)
+ * @method mixed logWarningWithTimer(Closure $callback, string $description)
+ * @method mixed logErrorWithTimer(Closure $callback, string $description)
+ * @method mixed logCriticalWithTimer(Closure $callback, string $description)
+ * @method mixed logAlertWithTimer(Closure $callback, string $description)
+ * @method mixed logEmergencyWithTimer(Closure $callback, string $description)
+ * 
+ * Static log with timer methods:
+ * @method static mixed logDebugWithTimer(Closure $callback, string $description)
+ * @method static mixed logInfoWithTimer(Closure $callback, string $description)
+ * @method static mixed logNoticeWithTimer(Closure $callback, string $description)
+ * @method static mixed logWarningWithTimer(Closure $callback, string $description)
+ * @method static mixed logErrorWithTimer(Closure $callback, string $description)
+ * @method static mixed logCriticalWithTimer(Closure $callback, string $description)
+ * @method static mixed logAlertWithTimer(Closure $callback, string $description)
+ * @method static mixed logEmergencyWithTimer(Closure $callback, string $description)
  */
 trait ErrorLog {
     protected static ?LoggerInterface $logger = null;
@@ -198,86 +278,6 @@ trait ErrorLog {
     }
 
     /**
-     * Loggt bedingt - nur wenn die Bedingung wahr ist
-     * 
-     * @param bool $condition Die zu prüfende Bedingung
-     * @param string $level Das Log-Level
-     * @param string $message Die Nachricht
-     * @param array $context Der Kontext
-     */
-    public static function logIf(bool $condition, string $level, string $message, array $context = []): void {
-        if ($condition) {
-            self::logInternal($level, $message, $context);
-        }
-    }
-
-    /**
-     * Loggt bedingt - nur wenn die Bedingung falsch ist
-     * 
-     * @param bool $condition Die zu prüfende Bedingung
-     * @param string $level Das Log-Level
-     * @param string $message Die Nachricht
-     * @param array $context Der Kontext
-     */
-    public static function logUnless(bool $condition, string $level, string $message, array $context = []): void {
-        if (!$condition) {
-            self::logInternal($level, $message, $context);
-        }
-    }
-
-    /**
-     * Führt eine Closure aus und loggt die Ausführungszeit
-     * 
-     * @template T
-     * @param Closure(): T $callback Die auszuführende Funktion
-     * @param string $description Beschreibung der Operation
-     * @param string $level Das Log-Level (Standard: DEBUG)
-     * @return T Das Ergebnis der Closure
-     */
-    public static function logWithTimer(Closure $callback, string $description, string $level = LogLevel::DEBUG): mixed {
-        $startTime = hrtime(true);
-
-        try {
-            $result = $callback();
-            $duration = (hrtime(true) - $startTime) / 1_000_000; // Nanosekunden zu Millisekunden
-
-            self::logInternal($level, sprintf(
-                "%s completed in %.2f ms",
-                $description,
-                $duration
-            ));
-
-            return $result;
-        } catch (Throwable $e) {
-            $duration = (hrtime(true) - $startTime) / 1_000_000;
-
-            self::logInternal(LogLevel::ERROR, sprintf(
-                "%s failed after %.2f ms: %s",
-                $description,
-                $duration,
-                $e->getMessage()
-            ), self::extractExceptionContext($e));
-
-            throw $e;
-        }
-    }
-
-    /**
-     * Loggt eine Nachricht und gibt eine Variable zurück (für Fluent-Chains)
-     * 
-     * @template T
-     * @param T $value Der Wert der zurückgegeben werden soll
-     * @param string $level Das Log-Level
-     * @param string $message Die Nachricht
-     * @param array $context Der Kontext
-     * @return T Der übergebene Wert
-     */
-    public static function logAndReturn(mixed $value, string $level, string $message, array $context = []): mixed {
-        self::logInternal($level, $message, $context);
-        return $value;
-    }
-
-    /**
      * Erstellt einen Kontext mit automatisch erfassten Debug-Informationen
      * 
      * @param array $additionalContext Zusätzlicher Kontext
@@ -324,19 +324,49 @@ trait ErrorLog {
     }
 
     /**
-     * Parst den Methodennamen und gibt das Log-Level zurück.
-     * Unterstützt: log{Level}
+     * Parst den Methodennamen und gibt das Log-Level sowie den Methodentyp zurück.
+     * Unterstützt: log{Level}, log{Level}If, log{Level}Unless, log{Level}AndReturn, log{Level}WithTimer
      * 
-     * @return string|null Das PSR-3 Log-Level oder null
+     * @return array{level: string, type: string}|null Das PSR-3 Log-Level und der Typ oder null
      */
-    private static function parseMethodName(string $name): ?string {
+    private static function parseMethodName(string $name): ?array {
         if (!str_starts_with($name, 'log')) {
             return null;
         }
 
         $suffix = substr($name, 3); // Entferne 'log' Präfix
 
-        return self::$logLevelMap[$suffix] ?? null;
+        // Prüfe auf log{Level}If
+        if (str_ends_with($suffix, 'If')) {
+            $levelName = substr($suffix, 0, -2);
+            $level = self::$logLevelMap[$levelName] ?? null;
+            return $level !== null ? ['level' => $level, 'type' => 'if'] : null;
+        }
+
+        // Prüfe auf log{Level}Unless
+        if (str_ends_with($suffix, 'Unless')) {
+            $levelName = substr($suffix, 0, -6);
+            $level = self::$logLevelMap[$levelName] ?? null;
+            return $level !== null ? ['level' => $level, 'type' => 'unless'] : null;
+        }
+
+        // Prüfe auf log{Level}AndReturn
+        if (str_ends_with($suffix, 'AndReturn')) {
+            $levelName = substr($suffix, 0, -9);
+            $level = self::$logLevelMap[$levelName] ?? null;
+            return $level !== null ? ['level' => $level, 'type' => 'andReturn'] : null;
+        }
+
+        // Prüfe auf log{Level}WithTimer
+        if (str_ends_with($suffix, 'WithTimer')) {
+            $levelName = substr($suffix, 0, -9);
+            $level = self::$logLevelMap[$levelName] ?? null;
+            return $level !== null ? ['level' => $level, 'type' => 'withTimer'] : null;
+        }
+
+        // Standard log{Level}
+        $level = self::$logLevelMap[$suffix] ?? null;
+        return $level !== null ? ['level' => $level, 'type' => 'standard'] : null;
     }
 
     /**
@@ -361,12 +391,83 @@ trait ErrorLog {
      * Gemeinsame Implementierung für __call und __callStatic
      */
     private static function handleMagicCall(string $name, array $arguments): mixed {
-        $level = self::parseMethodName($name);
+        $parsed = self::parseMethodName($name);
 
-        if ($level !== null) {
-            array_unshift($arguments, $level);
-            self::logInternal(...$arguments);
-            return null;
+        if ($parsed !== null) {
+            $level = $parsed['level'];
+            $type = $parsed['type'];
+
+            switch ($type) {
+                case 'if':
+                    // log{Level}If(bool $condition, string $message, array $context = [])
+                    $condition = $arguments[0] ?? false;
+                    if ($condition) {
+                        $message = $arguments[1] ?? '';
+                        $context = $arguments[2] ?? [];
+                        self::logInternal($level, $message, $context);
+                    }
+                    return null;
+
+                case 'unless':
+                    // log{Level}Unless(bool $condition, string $message, array $context = [])
+                    $condition = $arguments[0] ?? false;
+                    if (!$condition) {
+                        $message = $arguments[1] ?? '';
+                        $context = $arguments[2] ?? [];
+                        self::logInternal($level, $message, $context);
+                    }
+                    return null;
+
+                case 'andReturn':
+                    // log{Level}AndReturn(mixed $value, string $message, array $context = [])
+                    $value = $arguments[0] ?? null;
+                    $message = $arguments[1] ?? '';
+                    $context = $arguments[2] ?? [];
+                    self::logInternal($level, $message, $context);
+                    return $value;
+
+                case 'withTimer':
+                    // log{Level}WithTimer(Closure $callback, string $description)
+                    $callback = $arguments[0] ?? null;
+                    $description = $arguments[1] ?? '';
+
+                    if (!$callback instanceof Closure) {
+                        throw new BadMethodCallException("Erstes Argument muss eine Closure sein");
+                    }
+
+                    $startTime = hrtime(true);
+
+                    try {
+                        $result = $callback();
+                        $duration = (hrtime(true) - $startTime) / 1_000_000;
+
+                        self::logInternal($level, sprintf(
+                            "%s completed in %.2f ms",
+                            $description,
+                            $duration
+                        ));
+
+                        return $result;
+                    } catch (Throwable $e) {
+                        $duration = (hrtime(true) - $startTime) / 1_000_000;
+
+                        self::logInternal(LogLevel::ERROR, sprintf(
+                            "%s failed after %.2f ms: %s",
+                            $description,
+                            $duration,
+                            $e->getMessage()
+                        ), self::extractExceptionContext($e));
+
+                        throw $e;
+                    }
+
+                case 'standard':
+                default:
+                    // log{Level}(string $message, array $context = [])
+                    array_unshift($arguments, $level);
+                    self::logInternal(...$arguments);
+                    return null;
+            }
         }
 
         throw new BadMethodCallException("Methode $name existiert nicht in " . __TRAIT__);

@@ -33,6 +33,9 @@ class ErrorLogTestClass {
         if (false)
             return "Unreachable";
 
+        if ($this->logWarningIf(true, "This is a warning"))
+            return "Warning logged";
+
         $this->logErrorAndThrow(RuntimeException::class, "This is a test error");
     }
 }
@@ -356,55 +359,103 @@ class ErrorLogTraitTest extends TestCase {
     }
 
     /**
-     * Test: logIf() loggt nur wenn Bedingung wahr ist
+     * Test: logWarningIf() loggt nur wenn Bedingung wahr ist
      */
-    public function testLogIfTrue(): void {
+    public function testLogWarningIfTrue(): void {
         ob_start();
-        ErrorLogTestClass::logIf(true, LogLevel::INFO, "Should be logged");
+        ErrorLogTestClass::logWarningIf(true, "Should be logged");
         $output = ob_get_clean();
 
         $this->assertStringContainsString("Should be logged", $output);
+        $this->assertStringContainsString("warning", strtolower($output));
     }
 
     /**
-     * Test: logIf() loggt nicht wenn Bedingung falsch ist
+     * Test: logWarningIf() loggt nicht wenn Bedingung falsch ist
      */
-    public function testLogIfFalse(): void {
+    public function testLogWarningIfFalse(): void {
         ob_start();
-        ErrorLogTestClass::logIf(false, LogLevel::INFO, "Should NOT be logged");
+        ErrorLogTestClass::logWarningIf(false, "Should NOT be logged");
         $output = ob_get_clean();
 
         $this->assertEmpty(trim($output));
     }
 
     /**
-     * Test: logUnless() loggt nur wenn Bedingung falsch ist
+     * Test: logErrorUnless() loggt nur wenn Bedingung falsch ist
      */
-    public function testLogUnlessFalse(): void {
+    public function testLogErrorUnlessFalse(): void {
         ob_start();
-        ErrorLogTestClass::logUnless(false, LogLevel::INFO, "Should be logged");
+        ErrorLogTestClass::logErrorUnless(false, "Should be logged");
         $output = ob_get_clean();
 
         $this->assertStringContainsString("Should be logged", $output);
+        $this->assertStringContainsString("error", strtolower($output));
     }
 
     /**
-     * Test: logUnless() loggt nicht wenn Bedingung wahr ist
+     * Test: logErrorUnless() loggt nicht wenn Bedingung wahr ist
      */
-    public function testLogUnlessTrue(): void {
+    public function testLogErrorUnlessTrue(): void {
         ob_start();
-        ErrorLogTestClass::logUnless(true, LogLevel::INFO, "Should NOT be logged");
+        ErrorLogTestClass::logErrorUnless(true, "Should NOT be logged");
         $output = ob_get_clean();
 
         $this->assertEmpty(trim($output));
     }
 
     /**
-     * Test: logWithTimer() führt Callback aus und loggt Zeit
+     * Test: Alle Log-Level If Varianten
      */
-    public function testLogWithTimer(): void {
+    public function testAllLogLevelsIf(): void {
+        $levels = ['Debug', 'Info', 'Notice', 'Warning', 'Error', 'Critical', 'Alert', 'Emergency'];
+
+        foreach ($levels as $level) {
+            $method = 'log' . $level . 'If';
+
+            // Test mit true - sollte loggen
+            ob_start();
+            ErrorLogTestClass::$method(true, "Conditional {$level} message");
+            $output = ob_get_clean();
+            $this->assertStringContainsString("Conditional {$level} message", $output, "log{$level}If(true) sollte loggen");
+
+            // Test mit false - sollte nicht loggen
+            ob_start();
+            ErrorLogTestClass::$method(false, "Should not appear");
+            $output = ob_get_clean();
+            $this->assertEmpty(trim($output), "log{$level}If(false) sollte nicht loggen");
+        }
+    }
+
+    /**
+     * Test: Alle Log-Level Unless Varianten
+     */
+    public function testAllLogLevelsUnless(): void {
+        $levels = ['Debug', 'Info', 'Notice', 'Warning', 'Error', 'Critical', 'Alert', 'Emergency'];
+
+        foreach ($levels as $level) {
+            $method = 'log' . $level . 'Unless';
+
+            // Test mit false - sollte loggen
+            ob_start();
+            ErrorLogTestClass::$method(false, "Unless {$level} message");
+            $output = ob_get_clean();
+            $this->assertStringContainsString("Unless {$level} message", $output, "log{$level}Unless(false) sollte loggen");
+
+            // Test mit true - sollte nicht loggen
+            ob_start();
+            ErrorLogTestClass::$method(true, "Should not appear");
+            $output = ob_get_clean();
+            $this->assertEmpty(trim($output), "log{$level}Unless(true) sollte nicht loggen");
+        }
+    }
+
+    /**
+     * Test: logDebugWithTimer() führt Callback aus und loggt Zeit
+     */
+    public function testLogDebugWithTimer(): void {
         ob_start();
-        $result = ErrorLogTestClass::logWithTimer(function () {
+        $result = ErrorLogTestClass::logDebugWithTimer(function () {
             usleep(10000); // 10ms warten
             return "timer result";
         }, "Test operation");
@@ -414,18 +465,34 @@ class ErrorLogTraitTest extends TestCase {
         $this->assertStringContainsString("Test operation", $output);
         $this->assertStringContainsString("completed", $output);
         $this->assertStringContainsString("ms", $output);
+        $this->assertStringContainsString("debug", strtolower($output));
     }
 
     /**
-     * Test: logWithTimer() loggt Fehler bei Exception
+     * Test: logInfoWithTimer() führt Callback aus und loggt Zeit auf Info-Level
      */
-    public function testLogWithTimerOnException(): void {
+    public function testLogInfoWithTimer(): void {
+        ob_start();
+        $result = ErrorLogTestClass::logInfoWithTimer(function () {
+            return 42;
+        }, "Calculate answer");
+        $output = ob_get_clean();
+
+        $this->assertSame(42, $result);
+        $this->assertStringContainsString("Calculate answer", $output);
+        $this->assertStringContainsString("info", strtolower($output));
+    }
+
+    /**
+     * Test: logWarningWithTimer() loggt Fehler bei Exception
+     */
+    public function testLogWarningWithTimerOnException(): void {
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage("Timer callback failed");
 
         ob_start();
         try {
-            ErrorLogTestClass::logWithTimer(function () {
+            ErrorLogTestClass::logWarningWithTimer(function () {
                 throw new RuntimeException("Timer callback failed");
             }, "Failing operation");
         } finally {
@@ -436,19 +503,136 @@ class ErrorLogTraitTest extends TestCase {
     }
 
     /**
-     * Test: logAndReturn() loggt und gibt Wert zurück
+     * Test: Alle Log-Level WithTimer Varianten
      */
-    public function testLogAndReturn(): void {
+    public function testAllLogLevelsWithTimer(): void {
+        $levels = ['Debug', 'Info', 'Notice', 'Warning', 'Error', 'Critical', 'Alert', 'Emergency'];
+
+        foreach ($levels as $level) {
+            $method = 'log' . $level . 'WithTimer';
+
+            ob_start();
+            $result = ErrorLogTestClass::$method(function () use ($level) {
+                return "result_{$level}";
+            }, "Operation {$level}");
+            $output = ob_get_clean();
+
+            $this->assertSame("result_{$level}", $result, "log{$level}WithTimer sollte Ergebnis zurückgeben");
+            $this->assertStringContainsString("Operation {$level}", $output, "log{$level}WithTimer sollte Description loggen");
+            $this->assertStringContainsString("completed", $output);
+        }
+    }
+
+    /**
+     * Test: logDebugAndReturn() loggt und gibt Wert zurück
+     */
+    public function testLogDebugAndReturn(): void {
         ob_start();
-        $result = ErrorLogTestClass::logAndReturn(
+        $result = ErrorLogTestClass::logDebugAndReturn(
             ["key" => "value"],
-            LogLevel::DEBUG,
             "Returning data"
         );
         $output = ob_get_clean();
 
         $this->assertSame(["key" => "value"], $result);
         $this->assertStringContainsString("Returning data", $output);
+        $this->assertStringContainsString("debug", strtolower($output));
+    }
+
+    /**
+     * Test: logInfoAndReturn() loggt auf Info-Level und gibt Wert zurück
+     */
+    public function testLogInfoAndReturn(): void {
+        ob_start();
+        $result = ErrorLogTestClass::logInfoAndReturn("string value", "String returned");
+        $output = ob_get_clean();
+
+        $this->assertSame("string value", $result);
+        $this->assertStringContainsString("String returned", $output);
+        $this->assertStringContainsString("info", strtolower($output));
+    }
+
+    /**
+     * Test: Alle Log-Level AndReturn Varianten
+     */
+    public function testAllLogLevelsAndReturn(): void {
+        $levels = ['Debug', 'Info', 'Notice', 'Warning', 'Error', 'Critical', 'Alert', 'Emergency'];
+
+        foreach ($levels as $level) {
+            $method = 'log' . $level . 'AndReturn';
+            $expectedValue = "value_{$level}";
+
+            ob_start();
+            $result = ErrorLogTestClass::$method($expectedValue, "Return {$level} message");
+            $output = ob_get_clean();
+
+            $this->assertSame($expectedValue, $result, "log{$level}AndReturn sollte Wert zurückgeben");
+            $this->assertStringContainsString("Return {$level} message", $output, "log{$level}AndReturn sollte Nachricht loggen");
+        }
+    }
+
+    /**
+     * Test: logWarningAndReturn() mit Kontext
+     */
+    public function testLogWarningAndReturnWithContext(): void {
+        ob_start();
+        $result = ErrorLogTestClass::logWarningAndReturn(
+            null,
+            "Warning with context",
+            ['user_id' => 123]
+        );
+        $output = ob_get_clean();
+
+        $this->assertNull($result);
+        $this->assertStringContainsString("Warning with context", $output);
+        $this->assertStringContainsString("warning", strtolower($output));
+    }
+
+    /**
+     * Test: logInfoIf() als Instanzmethode
+     */
+    public function testLogInfoIfInstance(): void {
+        ob_start();
+        $this->testInstance->logInfoIf(true, "Instance conditional log");
+        $output = ob_get_clean();
+
+        $this->assertStringContainsString("Instance conditional log", $output);
+    }
+
+    /**
+     * Test: logDebugAndReturn() als Instanzmethode
+     */
+    public function testLogDebugAndReturnInstance(): void {
+        ob_start();
+        $result = $this->testInstance->logDebugAndReturn(100, "Instance return");
+        $output = ob_get_clean();
+
+        $this->assertSame(100, $result);
+        $this->assertStringContainsString("Instance return", $output);
+    }
+
+    /**
+     * Test: logInfoWithTimer() als Instanzmethode
+     */
+    public function testLogInfoWithTimerInstance(): void {
+        ob_start();
+        $result = $this->testInstance->logInfoWithTimer(function () {
+            return "instance timer result";
+        }, "Instance timer operation");
+        $output = ob_get_clean();
+
+        $this->assertSame("instance timer result", $result);
+        $this->assertStringContainsString("Instance timer operation", $output);
+    }
+
+    /**
+     * Test: logWithTimer mit ungültigem Argument wirft Exception
+     */
+    public function testLogWithTimerInvalidArgumentThrowsException(): void {
+        $this->expectException(BadMethodCallException::class);
+        $this->expectExceptionMessageMatches('/Closure/');
+
+        ErrorLogTestClass::logDebugWithTimer("not a closure", "Invalid");
     }
 
     /**
