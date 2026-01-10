@@ -236,6 +236,104 @@ trait ErrorLog {
     // ========================================================================
 
     /**
+     * Liste der internen Trait-Methoden, die im Backtrace übersprungen werden sollen
+     */
+    private static array $internalMethods = [
+        'logInternal',
+        'handleMagicCall',
+        'handleConditionalLog',
+        'handleLogAndReturn',
+        'handleLogWithTimer',
+        'handleStandardLog',
+        'doLogAndThrow',
+        'logErrorAndThrow',
+        'logCriticalAndThrow',
+        'logAlertAndThrow',
+        'logEmergencyAndThrow',
+        'logException',
+        '__call',
+        '__callStatic',
+        'getExternalCaller',
+        'createDebugContext',
+    ];
+
+    /**
+     * Ermittelt den ersten externen Caller außerhalb des ErrorLog Traits.
+     * Überspringt alle internen Trait-Methoden im Backtrace.
+     * Funktioniert auch bei Script-Aufrufen ohne Klassen-Kontext.
+     * 
+     * Bei Backtraces gilt:
+     * - file/line zeigt WO die Funktion aufgerufen wurde
+     * - function/class zeigt WELCHE Funktion aufgerufen wurde
+     * 
+     * Wir wollen: file/line vom Aufrufpunkt + function/class des Aufrufers (nächster Frame)
+     * 
+     * @param int $additionalSkip Zusätzliche Frames, die übersprungen werden sollen
+     * @return array{file: string, line: int, function: string, class: string|null}
+     */
+    private static function getExternalCaller(int $additionalSkip = 0): array {
+        $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 20);
+
+        $defaultCaller = [
+            'file' => 'unknown',
+            'line' => 0,
+            'function' => '{script}',
+            'class' => null,
+        ];
+
+        $skipCount = 0;
+
+        // Finde den letzten internen Frame - der nächste Frame danach ist der externe Caller
+        $lastInternalIndex = -1;
+        foreach ($backtrace as $index => $frame) {
+            $function = $frame['function'] ?? '';
+            if (in_array($function, self::$internalMethods, true)) {
+                $lastInternalIndex = $index;
+            }
+        }
+
+        // Der Frame nach dem letzten internen Frame enthält file/line wo der externe Aufruf stattfand
+        $callerFrameIndex = $lastInternalIndex;
+
+        // Überspringe zusätzliche Frames
+        $callerFrameIndex += $additionalSkip;
+
+        if ($callerFrameIndex < 0 || !isset($backtrace[$callerFrameIndex])) {
+            return $defaultCaller;
+        }
+
+        $callerFrame = $backtrace[$callerFrameIndex];
+        $nextFrame = $backtrace[$callerFrameIndex + 1] ?? null;
+
+        $file = $callerFrame['file'] ?? $defaultCaller['file'];
+        $line = $callerFrame['line'] ?? 0;
+
+        // Wenn es einen nächsten Frame gibt, ist das der tatsächliche Caller
+        if ($nextFrame !== null) {
+            $callerFunction = $nextFrame['function'] ?? null;
+            $callerClass = $nextFrame['class'] ?? null;
+
+            // Prüfe ob auch der nächste Frame intern ist
+            if ($callerFunction !== null && !in_array($callerFunction, self::$internalMethods, true)) {
+                return [
+                    'file' => $file,
+                    'line' => $line,
+                    'function' => $callerFunction,
+                    'class' => $callerClass,
+                ];
+            }
+        }
+
+        // Script-Aufruf (kein weiterer Frame = Aufruf vom globalen Scope)
+        return [
+            'file' => $file,
+            'line' => $line,
+            'function' => '{script}',
+            'class' => null,
+        ];
+    }
+
+    /**
      * Loggt eine Throwable/Exception mit vollständigem Stack-Trace
      * 
      * @param Throwable $exception Die zu loggende Exception
@@ -277,24 +375,24 @@ trait ErrorLog {
     }
 
     /**
-     * Erstellt einen Kontext mit automatisch erfassten Debug-Informationen
+     * Erstellt einen Kontext mit automatisch erfassten Debug-Informationen.
+     * Ermittelt automatisch den ersten externen Caller außerhalb des Traits.
      * 
      * @param array $additionalContext Zusätzlicher Kontext
      * @return array Der erweiterte Kontext
      */
     public static function createDebugContext(array $additionalContext = []): array {
-        $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2);
-        $caller = $backtrace[1] ?? [];
+        $caller = self::getExternalCaller();
 
         return array_merge([
             '_debug' => [
                 'memory_usage' => memory_get_usage(true),
                 'memory_peak' => memory_get_peak_usage(true),
                 'timestamp' => microtime(true),
-                'file' => $caller['file'] ?? 'unknown',
-                'line' => $caller['line'] ?? 0,
-                'function' => $caller['function'] ?? 'unknown',
-                'class' => $caller['class'] ?? null,
+                'file' => $caller['file'],
+                'line' => $caller['line'],
+                'function' => $caller['function'],
+                'class' => $caller['class'],
             ],
         ], $additionalContext);
     }
