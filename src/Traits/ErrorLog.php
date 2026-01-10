@@ -13,9 +13,11 @@ declare(strict_types=1);
 namespace ERRORToolkit\Traits;
 
 use BadMethodCallException;
+use Closure;
 use ERRORToolkit\LoggerRegistry;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
+use RuntimeException;
 use Throwable;
 
 /**
@@ -40,26 +42,6 @@ use Throwable;
  * @method static void logCritical(string $message, array $context = [])
  * @method static void logAlert(string $message, array $context = [])
  * @method static void logEmergency(string $message, array $context = [])
- * 
- * Log-and-throw methods (return never, always throw):
- * @method never logDebugAndThrow(class-string<Throwable> $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
- * @method never logInfoAndThrow(class-string<Throwable> $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
- * @method never logNoticeAndThrow(class-string<Throwable> $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
- * @method never logWarningAndThrow(class-string<Throwable> $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
- * @method never logErrorAndThrow(class-string<Throwable> $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
- * @method never logCriticalAndThrow(class-string<Throwable> $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
- * @method never logAlertAndThrow(class-string<Throwable> $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
- * @method never logEmergencyAndThrow(class-string<Throwable> $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
- * 
- * Static log-and-throw methods (return never, always throw):
- * @method static never logDebugAndThrow(class-string<Throwable> $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
- * @method static never logInfoAndThrow(class-string<Throwable> $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
- * @method static never logNoticeAndThrow(class-string<Throwable> $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
- * @method static never logWarningAndThrow(class-string<Throwable> $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
- * @method static never logErrorAndThrow(class-string<Throwable> $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
- * @method static never logCriticalAndThrow(class-string<Throwable> $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
- * @method static never logAlertAndThrow(class-string<Throwable> $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
- * @method static never logEmergencyAndThrow(class-string<Throwable> $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
  */
 trait ErrorLog {
     protected static ?LoggerInterface $logger = null;
@@ -98,6 +80,20 @@ trait ErrorLog {
         }
 
         return 'UnknownProject'; // Fallback, falls nichts gefunden wird
+    }
+
+    /**
+     * Gibt den aktuell gesetzten Logger zurück (oder null)
+     */
+    public static function getLogger(): ?LoggerInterface {
+        return self::$logger ?? LoggerRegistry::getLogger();
+    }
+
+    /**
+     * Prüft, ob ein Logger gesetzt ist
+     */
+    public static function hasLogger(): bool {
+        return self::$logger !== null || LoggerRegistry::hasLogger();
     }
 
     /**
@@ -156,74 +152,219 @@ trait ErrorLog {
         };
     }
 
+    // ========================================================================
+    // Erweiterte Logging-Funktionen
+    // ========================================================================
+
     /**
-     * Parst den Methodennamen und gibt das Log-Level sowie den Suffix zurück.
-     * Unterstützt: log{Level} und log{Level}AndThrow
+     * Loggt eine Throwable/Exception mit vollständigem Stack-Trace
      * 
-     * @return array{level: string, andThrow: bool}|null
+     * @param Throwable $exception Die zu loggende Exception
+     * @param string $level Das Log-Level (Standard: ERROR)
+     * @param array $context Zusätzlicher Kontext
      */
-    private static function parseMethodName(string $name): ?array {
+    public static function logException(Throwable $exception, string $level = LogLevel::ERROR, array $context = []): void {
+        $context = array_merge($context, self::extractExceptionContext($exception));
+
+        $message = sprintf(
+            "%s: %s in %s:%d",
+            get_class($exception),
+            $exception->getMessage(),
+            $exception->getFile(),
+            $exception->getLine()
+        );
+
+        self::logInternal($level, $message, $context);
+    }
+
+    /**
+     * Extrahiert Kontext-Informationen aus einer Exception
+     */
+    private static function extractExceptionContext(Throwable $exception): array {
+        $context = [
+            'exception' => get_class($exception),
+            'message' => $exception->getMessage(),
+            'code' => $exception->getCode(),
+            'file' => $exception->getFile(),
+            'line' => $exception->getLine(),
+            'trace' => $exception->getTraceAsString(),
+        ];
+
+        if ($exception->getPrevious() !== null) {
+            $context['previous'] = self::extractExceptionContext($exception->getPrevious());
+        }
+
+        return $context;
+    }
+
+    /**
+     * Loggt bedingt - nur wenn die Bedingung wahr ist
+     * 
+     * @param bool $condition Die zu prüfende Bedingung
+     * @param string $level Das Log-Level
+     * @param string $message Die Nachricht
+     * @param array $context Der Kontext
+     */
+    public static function logIf(bool $condition, string $level, string $message, array $context = []): void {
+        if ($condition) {
+            self::logInternal($level, $message, $context);
+        }
+    }
+
+    /**
+     * Loggt bedingt - nur wenn die Bedingung falsch ist
+     * 
+     * @param bool $condition Die zu prüfende Bedingung
+     * @param string $level Das Log-Level
+     * @param string $message Die Nachricht
+     * @param array $context Der Kontext
+     */
+    public static function logUnless(bool $condition, string $level, string $message, array $context = []): void {
+        if (!$condition) {
+            self::logInternal($level, $message, $context);
+        }
+    }
+
+    /**
+     * Führt eine Closure aus und loggt die Ausführungszeit
+     * 
+     * @template T
+     * @param Closure(): T $callback Die auszuführende Funktion
+     * @param string $description Beschreibung der Operation
+     * @param string $level Das Log-Level (Standard: DEBUG)
+     * @return T Das Ergebnis der Closure
+     */
+    public static function logWithTimer(Closure $callback, string $description, string $level = LogLevel::DEBUG): mixed {
+        $startTime = hrtime(true);
+
+        try {
+            $result = $callback();
+            $duration = (hrtime(true) - $startTime) / 1_000_000; // Nanosekunden zu Millisekunden
+
+            self::logInternal($level, sprintf(
+                "%s completed in %.2f ms",
+                $description,
+                $duration
+            ));
+
+            return $result;
+        } catch (Throwable $e) {
+            $duration = (hrtime(true) - $startTime) / 1_000_000;
+
+            self::logInternal(LogLevel::ERROR, sprintf(
+                "%s failed after %.2f ms: %s",
+                $description,
+                $duration,
+                $e->getMessage()
+            ), self::extractExceptionContext($e));
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Loggt eine Nachricht und gibt eine Variable zurück (für Fluent-Chains)
+     * 
+     * @template T
+     * @param T $value Der Wert der zurückgegeben werden soll
+     * @param string $level Das Log-Level
+     * @param string $message Die Nachricht
+     * @param array $context Der Kontext
+     * @return T Der übergebene Wert
+     */
+    public static function logAndReturn(mixed $value, string $level, string $message, array $context = []): mixed {
+        self::logInternal($level, $message, $context);
+        return $value;
+    }
+
+    /**
+     * Erstellt einen Kontext mit automatisch erfassten Debug-Informationen
+     * 
+     * @param array $additionalContext Zusätzlicher Kontext
+     * @return array Der erweiterte Kontext
+     */
+    public static function createDebugContext(array $additionalContext = []): array {
+        $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2);
+        $caller = $backtrace[1] ?? [];
+
+        return array_merge([
+            '_debug' => [
+                'memory_usage' => memory_get_usage(true),
+                'memory_peak' => memory_get_peak_usage(true),
+                'timestamp' => microtime(true),
+                'file' => $caller['file'] ?? 'unknown',
+                'line' => $caller['line'] ?? 0,
+                'function' => $caller['function'] ?? 'unknown',
+                'class' => $caller['class'] ?? null,
+            ],
+        ], $additionalContext);
+    }
+
+    /**
+     * Interpoliert PSR-3 Platzhalter in der Nachricht mit Kontext-Werten
+     * 
+     * @param string $message Die Nachricht mit {placeholder} Platzhaltern
+     * @param array $context Der Kontext mit Ersetzungswerten
+     * @return string Die interpolierte Nachricht
+     */
+    public static function interpolateMessage(string $message, array $context): string {
+        $replace = [];
+        foreach ($context as $key => $val) {
+            if (is_string($key) && !str_starts_with($key, '_')) {
+                if (is_null($val) || is_scalar($val) || (is_object($val) && method_exists($val, '__toString'))) {
+                    $replace['{' . $key . '}'] = (string) $val;
+                } elseif (is_array($val)) {
+                    $replace['{' . $key . '}'] = json_encode($val);
+                } elseif (is_object($val)) {
+                    $replace['{' . $key . '}'] = get_class($val);
+                }
+            }
+        }
+        return strtr($message, $replace);
+    }
+
+    /**
+     * Parst den Methodennamen und gibt das Log-Level zurück.
+     * Unterstützt: log{Level}
+     * 
+     * @return string|null Das PSR-3 Log-Level oder null
+     */
+    private static function parseMethodName(string $name): ?string {
         if (!str_starts_with($name, 'log')) {
             return null;
         }
 
         $suffix = substr($name, 3); // Entferne 'log' Präfix
-        $andThrow = false;
 
-        if (str_ends_with($suffix, 'AndThrow')) {
-            $andThrow = true;
-            $suffix = substr($suffix, 0, -8); // Entferne 'AndThrow' Suffix
-        }
-
-        if (isset(self::$logLevelMap[$suffix])) {
-            return [
-                'level' => self::$logLevelMap[$suffix],
-                'andThrow' => $andThrow,
-            ];
-        }
-
-        return null;
+        return self::$logLevelMap[$suffix] ?? null;
     }
 
     /**
      * Magische Methode für Instanzmethoden (nicht-statisch)
      * 
-     * Unterstützt:
-     * - log{Level}(string $message, array $context = [])
-     * - log{Level}AndThrow(string $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
+     * Unterstützt: log{Level}(string $message, array $context = [])
      */
     public function __call(string $name, array $arguments): mixed {
-        $parsed = self::parseMethodName($name);
-
-        if ($parsed !== null) {
-            if ($parsed['andThrow']) {
-                return $this->handleLogAndThrow($parsed['level'], $arguments);
-            }
-
-            array_unshift($arguments, $parsed['level']);
-            self::logInternal(...$arguments);
-            return null;
-        }
-
-        throw new BadMethodCallException("Methode $name existiert nicht in " . __TRAIT__);
+        return self::handleMagicCall($name, $arguments);
     }
 
     /**
      * Magische Methode für statische Methoden (statisch)
      * 
-     * Unterstützt:
-     * - log{Level}(string $message, array $context = [])
-     * - log{Level}AndThrow(string $exceptionClass, string $message, array $context = [], ?Throwable $previous = null)
+     * Unterstützt: log{Level}(string $message, array $context = [])
      */
     public static function __callStatic(string $name, array $arguments): mixed {
-        $parsed = self::parseMethodName($name);
+        return self::handleMagicCall($name, $arguments);
+    }
 
-        if ($parsed !== null) {
-            if ($parsed['andThrow']) {
-                return self::handleLogAndThrowStatic($parsed['level'], $arguments);
-            }
+    /**
+     * Gemeinsame Implementierung für __call und __callStatic
+     */
+    private static function handleMagicCall(string $name, array $arguments): mixed {
+        $level = self::parseMethodName($name);
 
-            array_unshift($arguments, $parsed['level']);
+        if ($level !== null) {
+            array_unshift($arguments, $level);
             self::logInternal(...$arguments);
             return null;
         }
@@ -231,37 +372,64 @@ trait ErrorLog {
         throw new BadMethodCallException("Methode $name existiert nicht in " . __TRAIT__);
     }
 
-    /**
-     * Interne Hilfsmethode für logAndThrow via magische Methode (Instanz)
-     * 
-     * @param string $level PSR-LogLevel
-     * @param array $arguments [exceptionClass, message, context?, previous?]
-     * @return never
-     */
-    private function handleLogAndThrow(string $level, array $arguments): never {
-        $exceptionClass = $arguments[0] ?? \RuntimeException::class;
-        $message = $arguments[1] ?? '';
-        $context = $arguments[2] ?? [];
-        $previous = $arguments[3] ?? null;
+    // ========================================================================
+    // Log-and-Throw Methoden - Echte statische Methoden für IDE-Unterstützung
+    // ========================================================================
 
+    /**
+     * Gemeinsame Implementierung für alle logAndThrow-Methoden
+     * 
+     * @template T of Throwable
+     * @param string $level PSR-3 Log-Level
+     * @param class-string<T> $exceptionClass
+     * @throws T
+     */
+    private static function doLogAndThrow(string $level, string $exceptionClass, string $message, array $context = [], ?Throwable $previous = null, int $code = 0): never {
         self::logInternal($level, $message, $context);
-        throw new $exceptionClass($message, 0, $previous);
+        throw new $exceptionClass($message, $code, $previous);
     }
 
     /**
-     * Interne Hilfsmethode für logAndThrow via magische Methode (statisch)
+     * Loggt eine Error-Nachricht und wirft eine Exception.
      * 
-     * @param string $level PSR-LogLevel
-     * @param array $arguments [exceptionClass, message, context?, previous?]
-     * @return never
+     * @template T of Throwable
+     * @param class-string<T> $exceptionClass
+     * @throws T
      */
-    private static function handleLogAndThrowStatic(string $level, array $arguments): never {
-        $exceptionClass = $arguments[0] ?? \RuntimeException::class;
-        $message = $arguments[1] ?? '';
-        $context = $arguments[2] ?? [];
-        $previous = $arguments[3] ?? null;
+    public static function logErrorAndThrow(string $exceptionClass, string $message, array $context = [], ?Throwable $previous = null, int $code = 0): never {
+        self::doLogAndThrow(LogLevel::ERROR, $exceptionClass, $message, $context, $previous, $code);
+    }
 
-        self::logInternal($level, $message, $context);
-        throw new $exceptionClass($message, 0, $previous);
+    /**
+     * Loggt eine Critical-Nachricht und wirft eine Exception.
+     * 
+     * @template T of Throwable
+     * @param class-string<T> $exceptionClass
+     * @throws T
+     */
+    public static function logCriticalAndThrow(string $exceptionClass, string $message, array $context = [], ?Throwable $previous = null, int $code = 0): never {
+        self::doLogAndThrow(LogLevel::CRITICAL, $exceptionClass, $message, $context, $previous, $code);
+    }
+
+    /**
+     * Loggt eine Alert-Nachricht und wirft eine Exception.
+     * 
+     * @template T of Throwable
+     * @param class-string<T> $exceptionClass
+     * @throws T
+     */
+    public static function logAlertAndThrow(string $exceptionClass, string $message, array $context = [], ?Throwable $previous = null, int $code = 0): never {
+        self::doLogAndThrow(LogLevel::ALERT, $exceptionClass, $message, $context, $previous, $code);
+    }
+
+    /**
+     * Loggt eine Emergency-Nachricht und wirft eine Exception.
+     * 
+     * @template T of Throwable
+     * @param class-string<T> $exceptionClass
+     * @throws T
+     */
+    public static function logEmergencyAndThrow(string $exceptionClass, string $message, array $context = [], ?Throwable $previous = null, int $code = 0): never {
+        self::doLogAndThrow(LogLevel::EMERGENCY, $exceptionClass, $message, $context, $previous, $code);
     }
 }
