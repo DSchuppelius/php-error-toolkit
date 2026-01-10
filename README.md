@@ -13,7 +13,7 @@ A PSR-3 compliant logging library built for PHP 8.2+ with a focus on console and
 - 📄 **File Logging** - Automatic log rotation and fail-safe mechanisms
 - 🏭 **Factory Pattern** - Clean instantiation with singleton behavior
 - 🌐 **Global Registry** - Centralized logger management across your application
-- ✨ **Magic Methods** - Convenient `logDebug()`, `logInfo()`, `logError()` methods via trait
+- ✨ **Magic Methods** - Convenient `logDebug()`, `logInfo()`, `logErrorAndThrow()` methods via trait
 - 🎨 **Cross-Platform** - Windows and Unix/Linux terminal support
 - 🧪 **Fully Tested** - Comprehensive test suite with PHPUnit
 
@@ -187,6 +187,86 @@ class MyClass {
         self::logInfo('User action', ['user' => 'admin', 'action' => 'login']);
     }
 }
+```
+
+### Log and Throw Exceptions
+
+Combine logging and exception throwing in a single call with `log{Level}AndThrow()`:
+
+```php
+use ERRORToolkit\Traits\ErrorLog;
+use RuntimeException;
+use InvalidArgumentException;
+
+class ValidationService {
+    use ErrorLog;
+
+    public function validateUser(array $data): void {
+        if (empty($data['email'])) {
+            // Logs error and throws exception in one call
+            $this->logErrorAndThrow(
+                InvalidArgumentException::class,
+                'Email is required'
+            );
+        }
+        
+        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            // With context array
+            $this->logWarningAndThrow(
+                InvalidArgumentException::class,
+                'Invalid email format',
+                ['email' => $data['email']]
+            );
+        }
+    }
+
+    public function processPayment(float $amount): void {
+        try {
+            // Payment processing...
+        } catch (\Exception $e) {
+            // With exception chaining
+            $this->logCriticalAndThrow(
+                RuntimeException::class,
+                'Payment processing failed',
+                ['amount' => $amount],
+                $e  // Previous exception for chaining
+            );
+        }
+    }
+
+    public static function validateConfig(array $config): void {
+        if (!isset($config['api_key'])) {
+            // Static usage
+            self::logErrorAndThrow(
+                RuntimeException::class,
+                'API key not configured'
+            );
+        }
+    }
+}
+```
+
+**Available log-and-throw methods:**
+
+| Method | Log Level |
+|--------|-----------|
+| `logDebugAndThrow()` | DEBUG |
+| `logInfoAndThrow()` | INFO |
+| `logNoticeAndThrow()` | NOTICE |
+| `logWarningAndThrow()` | WARNING |
+| `logErrorAndThrow()` | ERROR |
+| `logCriticalAndThrow()` | CRITICAL |
+| `logAlertAndThrow()` | ALERT |
+| `logEmergencyAndThrow()` | EMERGENCY |
+
+**Method signature:**
+```php
+log{Level}AndThrow(
+    string $exceptionClass,    // Exception class to throw (e.g., RuntimeException::class)
+    string $message,           // Error message (used for both log and exception)
+    array $context = [],       // Optional: Context array for logging
+    ?Throwable $previous = null // Optional: Previous exception for chaining
+): never
 ```
 
 ### Logger Management
