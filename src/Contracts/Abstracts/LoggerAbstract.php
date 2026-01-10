@@ -15,6 +15,7 @@ namespace ERRORToolkit\Contracts\Abstracts;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 use InvalidArgumentException;
+use Stringable;
 
 abstract class LoggerAbstract implements LoggerInterface {
     protected int $logLevel;
@@ -42,25 +43,141 @@ abstract class LoggerAbstract implements LoggerInterface {
         return $levels[$logLevel] ?? throw new InvalidArgumentException("Ungültiges LogLevel: {$logLevel}");
     }
 
-    private static function getCallerFunction(int $logLevel = 0): string {
-        $ignoreFunctions = ['logInternal', '__call', '__callStatic'];
-        $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+    /**
+     * Liste der internen Trait/Logger-Methoden, die im Backtrace übersprungen werden sollen.
+     * Diese Liste wird sowohl von LoggerAbstract als auch vom ErrorLog Trait verwendet.
+     */
+    public static array $internalMethods = [
+        // ErrorLog Trait Methoden
+        'logInternal',
+        'handleMagicCall',
+        'handleConditionalLog',
+        'handleLogAndReturn',
+        'handleLogWithTimer',
+        'handleStandardLog',
+        'doLogAndThrow',
+        'logErrorAndThrow',
+        'logCriticalAndThrow',
+        'logAlertAndThrow',
+        'logEmergencyAndThrow',
+        'logException',
+        '__call',
+        '__callStatic',
+        'getExternalCaller',
+        'createDebugContext',
+        // Logger Methoden
+        'log',
+        'emergency',
+        'alert',
+        'critical',
+        'error',
+        'warning',
+        'notice',
+        'info',
+        'debug',
+        'generateLogEntry',
+        'getCallerFunction',
+        'writeLog',
+    ];
 
-        foreach (array_slice($backtrace, 1) as $trace) {
-            if (
-                isset($trace['class'], $trace['function']) &&
-                !str_starts_with($trace['class'], 'ERRORToolkit') &&
-                !in_array($trace['function'], $ignoreFunctions, true)
-            ) {
-                if ($logLevel === 7) {
-                    $file = $trace['file'] ?? 'Unbekannt';
-                    $line = $trace['line'] ?? 0;
-                    return "{$trace['class']}::{$trace['function']}() in {$file}:{$line}";
-                }
-                return "{$trace['class']}::{$trace['function']}()";
+    /**
+     * Ermittelt den ersten externen Caller außerhalb des ERRORToolkit.
+     * Überspringt alle internen Trait/Logger-Methoden im Backtrace.
+     * Funktioniert auch bei Script-Aufrufen ohne Klassen-Kontext.
+     * 
+     * Bei Backtraces gilt:
+     * - file/line zeigt WO die Funktion aufgerufen wurde
+     * - function/class zeigt WELCHE Funktion aufgerufen wurde
+     * 
+     * @param int $additionalSkip Zusätzliche Frames, die übersprungen werden sollen
+     * @return array{file: string, line: int, function: string, class: string|null}
+     */
+    public static function getExternalCaller(int $additionalSkip = 0): array {
+        $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 20);
+
+        $defaultCaller = [
+            'file' => 'unknown',
+            'line' => 0,
+            'function' => '{script}',
+            'class' => null,
+        ];
+
+        // Finde den letzten internen Frame - der nächste Frame danach ist der externe Caller
+        $lastInternalIndex = -1;
+        foreach ($backtrace as $index => $frame) {
+            $function = $frame['function'] ?? '';
+            $class = $frame['class'] ?? null;
+
+            // Überspringe interne Methoden
+            if (in_array($function, self::$internalMethods, true)) {
+                $lastInternalIndex = $index;
+                continue;
+            }
+
+            // Überspringe ERRORToolkit Namespace
+            if ($class !== null && str_starts_with($class, 'ERRORToolkit')) {
+                $lastInternalIndex = $index;
             }
         }
-        return 'Unbekannt';
+
+        // Der Frame nach dem letzten internen Frame enthält file/line wo der externe Aufruf stattfand
+        $callerFrameIndex = $lastInternalIndex + $additionalSkip;
+
+        if ($callerFrameIndex < 0 || !isset($backtrace[$callerFrameIndex])) {
+            return $defaultCaller;
+        }
+
+        $callerFrame = $backtrace[$callerFrameIndex];
+        $nextFrame = $backtrace[$callerFrameIndex + 1] ?? null;
+
+        $file = $callerFrame['file'] ?? $defaultCaller['file'];
+        $line = $callerFrame['line'] ?? 0;
+
+        // Wenn es einen nächsten Frame gibt, ist das der tatsächliche Caller
+        if ($nextFrame !== null) {
+            $callerFunction = $nextFrame['function'] ?? null;
+            $callerClass = $nextFrame['class'] ?? null;
+
+            // Prüfe ob auch der nächste Frame intern ist
+            if ($callerFunction !== null && !in_array($callerFunction, self::$internalMethods, true)) {
+                return [
+                    'file' => $file,
+                    'line' => $line,
+                    'function' => $callerFunction,
+                    'class' => $callerClass,
+                ];
+            }
+        }
+
+        // Script-Aufruf (kein weiterer Frame = Aufruf vom globalen Scope)
+        return [
+            'file' => $file,
+            'line' => $line,
+            'function' => '{script}',
+            'class' => null,
+        ];
+    }
+
+    /**
+     * Formatiert die Caller-Information als String für Log-Einträge.
+     * 
+     * @param bool $includeFileInfo Ob Datei und Zeilennummer inkludiert werden sollen
+     * @return string Formatierter Caller-String
+     */
+    private static function getCallerFunction(bool $includeFileInfo = false): string {
+        $caller = self::getExternalCaller();
+
+        if ($caller['class'] !== null) {
+            $result = "{$caller['class']}::{$caller['function']}()";
+        } else {
+            $result = $caller['function'];
+        }
+
+        if ($includeFileInfo && $caller['file'] !== 'unknown') {
+            $result .= " in {$caller['file']}:{$caller['line']}";
+        }
+
+        return $result;
     }
 
 
@@ -68,7 +185,7 @@ abstract class LoggerAbstract implements LoggerInterface {
         return self::convertLogLevel($level) <= $this->logLevel;
     }
 
-    public function log($level, string|\Stringable $message, array $context = []): void {
+    public function log($level, string|Stringable $message, array $context = []): void {
         if (!$this->shouldLog($level)) {
             return;
         }
@@ -77,37 +194,38 @@ abstract class LoggerAbstract implements LoggerInterface {
         $this->writeLog($logEntry, $level);
     }
 
-    public function generateLogEntry($level, string|\Stringable $message, array $context = []): string {
+    public function generateLogEntry($level, string|Stringable $message, array $context = []): string {
         $timestamp = date('Y-m-d H:i:s');
-        $caller = self::getCallerFunction($this->logLevel);
+        // Bei DEBUG-Level (7) werden Datei und Zeile inkludiert
+        $caller = self::getCallerFunction($this->logLevel === 7);
         $contextString = empty($context) ? "" : " " . json_encode($context);
         return "[{$timestamp}] {$level} [{$caller}]: {$message}{$contextString}";
     }
 
     abstract protected function writeLog(string $logEntry, string $level): void;
 
-    public function emergency(string|\Stringable $message, array $context = []): void {
+    public function emergency(string|Stringable $message, array $context = []): void {
         $this->log(LogLevel::EMERGENCY, $message, $context);
     }
-    public function alert(string|\Stringable $message, array $context = []): void {
+    public function alert(string|Stringable $message, array $context = []): void {
         $this->log(LogLevel::ALERT, $message, $context);
     }
-    public function critical(string|\Stringable $message, array $context = []): void {
+    public function critical(string|Stringable $message, array $context = []): void {
         $this->log(LogLevel::CRITICAL, $message, $context);
     }
-    public function error(string|\Stringable $message, array $context = []): void {
+    public function error(string|Stringable $message, array $context = []): void {
         $this->log(LogLevel::ERROR, $message, $context);
     }
-    public function warning(string|\Stringable $message, array $context = []): void {
+    public function warning(string|Stringable $message, array $context = []): void {
         $this->log(LogLevel::WARNING, $message, $context);
     }
-    public function notice(string|\Stringable $message, array $context = []): void {
+    public function notice(string|Stringable $message, array $context = []): void {
         $this->log(LogLevel::NOTICE, $message, $context);
     }
-    public function info(string|\Stringable $message, array $context = []): void {
+    public function info(string|Stringable $message, array $context = []): void {
         $this->log(LogLevel::INFO, $message, $context);
     }
-    public function debug(string|\Stringable $message, array $context = []): void {
+    public function debug(string|Stringable $message, array $context = []): void {
         $this->log(LogLevel::DEBUG, $message, $context);
     }
 }
