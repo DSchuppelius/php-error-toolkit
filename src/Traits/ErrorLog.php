@@ -439,7 +439,7 @@ trait ErrorLog {
             $result = $callback();
             $duration = (hrtime(true) - $startTime) / 1_000_000;
 
-            self::logInternal($level, sprintf("%s completed in %.2f ms", $description, $duration));
+            self::logInternal($level, sprintf("%s (completed in %.2f ms)", $description, $duration));
 
             return $result;
         } catch (Throwable $e) {
@@ -447,7 +447,7 @@ trait ErrorLog {
 
             self::logInternal(
                 LogLevel::ERROR,
-                sprintf("%s failed after %.2f ms: %s", $description, $duration, $e->getMessage()),
+                sprintf("%s (failed after %.2f ms: %s)", $description, $duration, $e->getMessage()),
                 self::extractExceptionContext($e)
             );
 
