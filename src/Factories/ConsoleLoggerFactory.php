@@ -19,10 +19,20 @@ use Psr\Log\LoggerInterface;
 class ConsoleLoggerFactory implements LoggerFactoryInterface {
     protected static ?LoggerInterface $logger = null;
 
-    public static function getLogger(): LoggerInterface {
+    public static function getLogger(?string $logLevel = null, bool $enableDeduplication = true): LoggerInterface {
         if (self::$logger === null) {
-            self::$logger = new ConsoleLogger();
+            self::$logger = new ConsoleLogger($logLevel ?? \Psr\Log\LogLevel::DEBUG, $enableDeduplication);
         }
         return self::$logger;
+    }
+
+    /**
+     * Setzt den Logger zurück (nützlich für Tests oder Neukonfiguration).
+     */
+    public static function resetLogger(): void {
+        if (self::$logger instanceof ConsoleLogger) {
+            self::$logger->flushDuplicates();
+        }
+        self::$logger = null;
     }
 }

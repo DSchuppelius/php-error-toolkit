@@ -15,7 +15,6 @@ namespace ERRORToolkit\Logger;
 use ERRORToolkit\Contracts\Abstracts\LoggerAbstract;
 use ERRORToolkit\Helper\TerminalHelper;
 use Psr\Log\LogLevel;
-use Stringable;
 
 class ConsoleLogger extends LoggerAbstract {
 
@@ -32,8 +31,8 @@ class ConsoleLogger extends LoggerAbstract {
 
     protected string $resetColor = "\033[0m"; // Zurücksetzen auf Standard
 
-    public function __construct(string $logLevel = LogLevel::DEBUG) {
-        parent::__construct($logLevel);
+    public function __construct(string $logLevel = LogLevel::DEBUG, bool $enableDeduplication = true) {
+        parent::__construct($logLevel, $enableDeduplication);
     }
 
     protected function writeLog(string $logEntry, string $level): void {
@@ -51,14 +50,6 @@ class ConsoleLogger extends LoggerAbstract {
             echo $output . PHP_EOL;
         } else {
             echo PHP_EOL . $output;
-        }
-    }
-
-    public function log($level, string|Stringable $message, array $context = []): void {
-        if ($this->shouldLog($level)) {
-            $logEntry = $this->generateLogEntry($level, $message, $context);
-
-            $this->writeLog($logEntry, $level);
         }
     }
 }

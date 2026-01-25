@@ -20,8 +20,81 @@ use Stringable;
 abstract class LoggerAbstract implements LoggerInterface {
     protected int $logLevel;
 
-    public function __construct(string $logLevel = LogLevel::DEBUG) {
+    /**
+     * Deduplizierung: Verhindert doppelte aufeinanderfolgende Log-Einträge.
+     */
+    protected bool $deduplicationEnabled = true;
+    protected ?string $lastLogKey = null;
+    protected int $duplicateCount = 0;
+    protected ?string $lastLevel = null;
+    protected ?string $lastMessage = null;
+    protected array $lastContext = [];
+
+    public function __construct(string $logLevel = LogLevel::DEBUG, bool $enableDeduplication = true) {
         $this->setLogLevel($logLevel);
+        $this->deduplicationEnabled = $enableDeduplication;
+    }
+
+    /**
+     * Aktiviert oder deaktiviert die Deduplizierung von Log-Einträgen.
+     * 
+     * @param bool $enabled True um Deduplizierung zu aktivieren
+     */
+    public function setDeduplication(bool $enabled): void {
+        if (!$enabled && $this->deduplicationEnabled) {
+            // Vor dem Deaktivieren ausstehende Duplikate ausgeben
+            $this->flushDuplicates();
+        }
+        $this->deduplicationEnabled = $enabled;
+    }
+
+    /**
+     * Prüft, ob Deduplizierung aktiviert ist.
+     */
+    public function isDeduplicationEnabled(): bool {
+        return $this->deduplicationEnabled;
+    }
+
+    /**
+     * Gibt ausstehende Log-Einträge aus.
+     * Sollte am Ende einer Log-Session aufgerufen werden.
+     */
+    public function flushDuplicates(): void {
+        if ($this->lastLogKey !== null && $this->lastLevel !== null && $this->lastMessage !== null) {
+            $this->writePendingEntry();
+        }
+        $this->resetDeduplicationState();
+    }
+
+    /**
+     * Setzt den Deduplizierungs-Status zurück.
+     */
+    protected function resetDeduplicationState(): void {
+        $this->lastLogKey = null;
+        $this->duplicateCount = 0;
+        $this->lastLevel = null;
+        $this->lastMessage = null;
+        $this->lastContext = [];
+    }
+
+    /**
+     * Schreibt den ausstehenden Eintrag (mit Zähler falls Duplikate vorhanden).
+     */
+    protected function writePendingEntry(): void {
+        $message = $this->lastMessage;
+        if ($this->duplicateCount > 0) {
+            $count = $this->duplicateCount + 1; // +1 weil das erste Auftreten nicht gezählt wird
+            $message .= " (x{$count})";
+        }
+        $logEntry = $this->generateLogEntry($this->lastLevel, $message, $this->lastContext);
+        $this->writeLog($logEntry, $this->lastLevel);
+    }
+
+    /**
+     * Erzeugt einen eindeutigen Schlüssel für einen Log-Eintrag zur Deduplizierung.
+     */
+    protected function createLogKey(string $level, string|Stringable $message, array $context): string {
+        return md5($level . '|' . (string)$message . '|' . json_encode($context));
     }
 
     public function setLogLevel(string $logLevel): void {
@@ -190,6 +263,31 @@ abstract class LoggerAbstract implements LoggerInterface {
             return;
         }
 
+        // Deduplizierung: Prüfe ob gleicher Eintrag wie zuvor
+        if ($this->deduplicationEnabled) {
+            $currentKey = $this->createLogKey($level, $message, $context);
+
+            if ($this->lastLogKey === $currentKey) {
+                // Gleicher Eintrag - nur Zähler erhöhen, nicht loggen
+                $this->duplicateCount++;
+                return;
+            }
+
+            // Neuer, anderer Eintrag - vorherigen ausstehenden Eintrag ausgeben
+            if ($this->lastLogKey !== null && $this->lastLevel !== null) {
+                $this->writePendingEntry();
+            }
+
+            // Aktuellen Eintrag als ausstehend speichern
+            $this->lastLogKey = $currentKey;
+            $this->lastLevel = $level;
+            $this->lastMessage = (string)$message;
+            $this->lastContext = $context;
+            $this->duplicateCount = 0;
+            return;
+        }
+
+        // Ohne Deduplizierung: sofort ausgeben
         $logEntry = $this->generateLogEntry($level, $message, $context);
         $this->writeLog($logEntry, $level);
     }

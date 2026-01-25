@@ -46,7 +46,8 @@ class ErrorLogTraitTest extends TestCase {
     protected function setUp(): void {
         $this->testInstance = new ErrorLogTestClass();
         // Logger auf DEBUG setzen um alle Nachrichten zu erfassen
-        $logger = new ConsoleLogger(LogLevel::DEBUG);
+        // Deduplizierung deaktivieren für sofortige Ausgabe in Tests
+        $logger = new ConsoleLogger(LogLevel::DEBUG, enableDeduplication: false);
         LoggerRegistry::setLogger($logger);
         ErrorLogTestClass::setLogger($logger);
     }

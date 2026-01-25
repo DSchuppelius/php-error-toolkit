@@ -36,7 +36,7 @@ class FileLoggerTest extends TestCase {
     }
 
     public function testLogsAtOrAboveThreshold() {
-        $logger = new FileLogger($this->testLogFile, LogLevel::WARNING);
+        $logger = new FileLogger($this->testLogFile, LogLevel::WARNING, true, 5000000, true, enableDeduplication: false);
 
         $logger->log(LogLevel::INFO, "This is an info message");
 
@@ -52,7 +52,7 @@ class FileLoggerTest extends TestCase {
     }
 
     public function testUsesDefaultLogFileIfNoneProvided() {
-        $logger = new FileLogger(null, LogLevel::DEBUG);
+        $logger = new FileLogger(null, LogLevel::DEBUG, true, 5000000, true, enableDeduplication: false);
         $logger->log(LogLevel::DEBUG, "Message in default file");
 
         $defaultLog = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'default.log';
@@ -94,7 +94,7 @@ class FileLoggerTest extends TestCase {
         $this->expectExceptionMessageMatches("/Fehler beim Erstellen der Logdatei/");
 
         try {
-            new FileLogger($nonWritableLogFile, LogLevel::DEBUG, false);
+            new FileLogger($nonWritableLogFile, LogLevel::DEBUG, false, 5000000, true, enableDeduplication: false);
         } finally {
             chmod($nonWritableDir, 0700);
             if (file_exists($nonWritableLogFile)) {
@@ -109,7 +109,7 @@ class FileLoggerTest extends TestCase {
         file_put_contents($this->testLogFile, "");
         chmod($this->testLogFile, 0400); // Nur Lese-Rechte
 
-        $logger = new FileLogger($this->testLogFile, LogLevel::DEBUG);
+        $logger = new FileLogger($this->testLogFile, LogLevel::DEBUG, true, 5000000, true, enableDeduplication: false);
 
         $this->expectException(FileNotWrittenException::class);
         $this->expectExceptionMessageMatches("/Logdatei ist nicht beschreibbar/");

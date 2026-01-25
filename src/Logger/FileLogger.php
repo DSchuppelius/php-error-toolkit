@@ -23,8 +23,8 @@ class FileLogger extends LoggerAbstract {
     protected int $maxFileSize; // in Bytes
     protected bool $rotateLogs; // ob ein Archiv erstellt werden soll
 
-    public function __construct(?string $logFile = null, string $logLevel = LogLevel::DEBUG, bool $failSafe = true, int $maxFileSize = 5000000, bool $rotateLogs = true) {
-        parent::__construct($logLevel);
+    public function __construct(?string $logFile = null, string $logLevel = LogLevel::DEBUG, bool $failSafe = true, int $maxFileSize = 5242880, bool $rotateLogs = true, bool $enableDeduplication = true) {
+        parent::__construct($logLevel, $enableDeduplication);
 
         // Standard-Logdatei, falls die gegebene Datei nicht beschreibbar ist
         if (is_null($logFile) || ($failSafe && (!is_dir(dirname($logFile)) || !is_writable(dirname($logFile))))) {
