@@ -175,60 +175,44 @@ abstract class LoggerAbstract implements LoggerInterface {
             'class' => null,
         ];
 
-        // Finde den letzten internen Frame - der nächste Frame danach ist der externe Caller
-        $lastInternalIndex = -1;
+        // Finde den ERSTEN externen Frame (nicht den letzten internen!)
+        // Der erste Frame der NICHT intern ist UND NICHT zum ERRORToolkit gehört,
+        // ist der echte Caller der logInfo() etc. aufgerufen hat.
+
         foreach ($backtrace as $index => $frame) {
             $function = $frame['function'] ?? '';
             $class = $frame['class'] ?? null;
 
             // Überspringe interne Methoden
             if (in_array($function, self::$internalMethods, true)) {
-                $lastInternalIndex = $index;
                 continue;
             }
 
             // Überspringe ERRORToolkit Namespace
             if ($class !== null && str_starts_with($class, 'ERRORToolkit')) {
-                $lastInternalIndex = $index;
+                continue;
             }
-        }
 
-        // Der Frame nach dem letzten internen Frame enthält file/line wo der externe Aufruf stattfand
-        $callerFrameIndex = $lastInternalIndex + $additionalSkip;
-
-        if ($callerFrameIndex < 0 || !isset($backtrace[$callerFrameIndex])) {
-            return $defaultCaller;
-        }
-
-        $callerFrame = $backtrace[$callerFrameIndex];
-        $nextFrame = $backtrace[$callerFrameIndex + 1] ?? null;
-
-        $file = $callerFrame['file'] ?? $defaultCaller['file'];
-        $line = $callerFrame['line'] ?? 0;
-
-        // Wenn es einen nächsten Frame gibt, ist das der tatsächliche Caller
-        if ($nextFrame !== null) {
-            $callerFunction = $nextFrame['function'] ?? null;
-            $callerClass = $nextFrame['class'] ?? null;
-
-            // Prüfe ob auch der nächste Frame intern ist
-            if ($callerFunction !== null && !in_array($callerFunction, self::$internalMethods, true)) {
-                return [
-                    'file' => $file,
-                    'line' => $line,
-                    'function' => $callerFunction,
-                    'class' => $callerClass,
-                ];
+            // Wende additionalSkip an
+            if ($additionalSkip > 0) {
+                $additionalSkip--;
+                continue;
             }
+
+            // Das ist der erste externe Caller!
+            // file/line kommen vom VORHERIGEN Frame (wo der Aufruf stattfand)
+            $prevFrame = $backtrace[$index - 1] ?? null;
+
+            return [
+                'file' => $prevFrame['file'] ?? $frame['file'] ?? $defaultCaller['file'],
+                'line' => $prevFrame['line'] ?? $frame['line'] ?? 0,
+                'function' => $function,
+                'class' => $class,
+            ];
         }
 
-        // Script-Aufruf (kein weiterer Frame = Aufruf vom globalen Scope)
-        return [
-            'file' => $file,
-            'line' => $line,
-            'function' => '{script}',
-            'class' => null,
-        ];
+        // Fallback: Script-Aufruf
+        return $defaultCaller;
     }
 
     /**
