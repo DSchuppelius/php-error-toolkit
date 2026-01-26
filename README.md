@@ -1,10 +1,10 @@
 # PHP Error Toolkit
 
-[![PHP Version](https://img.shields.io/badge/PHP-8.2%2B-blue.svg)](https://www.php.net/)
+[![PHP Version](https://img.shields.io/badge/PHP-8.1--8.4-blue.svg)](https://www.php.net/)
 [![PSR-3 Compliant](https://img.shields.io/badge/PSR--3-Compliant-green.svg)](https://www.php-fig.org/psr/psr-3/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A PSR-3 compliant logging library built for PHP 8.2+ with a focus on console and file logging. Designed as a lightweight, reusable component for modern PHP applications.
+A PSR-3 compliant logging library built for PHP 8.1+ with a focus on console and file logging. Designed as a lightweight, reusable component for modern PHP applications.
 
 ## Features
 
@@ -14,7 +14,10 @@ A PSR-3 compliant logging library built for PHP 8.2+ with a focus on console and
 - 🏭 **Factory Pattern** - Clean instantiation with singleton behavior
 - 🌐 **Global Registry** - Centralized logger management across your application
 - ✨ **Magic Methods** - Convenient `logDebug()`, `logInfo()`, `logErrorAndThrow()` methods via trait
-- 🎨 **Cross-Platform** - Windows and Unix/Linux terminal support
+- ⏱️ **Timer Logging** - Measure execution time with `logInfoWithTimer()` and similar methods
+- 🔄 **Conditional Logging** - `logInfoIf()`, `logErrorUnless()` for conditional log output
+- 🔧 **OS Helper** - Cross-platform system detection and utilities
+- 🎨 **Cross-Platform** - Windows, Linux and macOS terminal support
 - 🧪 **Fully Tested** - Comprehensive test suite with PHPUnit
 
 ## Installation
@@ -27,7 +30,7 @@ composer require dschuppelius/php-error-toolkit
 
 ## Requirements
 
-- PHP 8.1 or higher
+- PHP 8.1 to 8.4
 - PSR-3 Log Interface
 
 ## Quick Start
@@ -94,18 +97,21 @@ class MyService {
 ## Logger Types
 
 ### Console Logger
+
 - Colored output with level-specific colors
 - Automatic terminal detection
 - Debug console support (VS Code, etc.)
 - Clean formatting with newline management
 
 ### File Logger
+
 - Automatic log rotation when size limit exceeded
 - Fail-safe fallback to console/syslog
 - Customizable file size limits
 - Thread-safe file operations
 
 ### Null Logger
+
 - Silent logger for testing/production environments
 - PSR-3 compliant no-op implementation
 
@@ -189,6 +195,111 @@ class MyClass {
 }
 ```
 
+### Conditional Logging
+
+Log messages only when conditions are met:
+
+```php
+use ERRORToolkit\Traits\ErrorLog;
+
+class DataProcessor {
+    use ErrorLog;
+
+    public function process(array $data, bool $verbose = false) {
+        // Log only if condition is true
+        $this->logDebugIf($verbose, 'Verbose mode enabled');
+        
+        // Log only if condition is false
+        $this->logWarningUnless(count($data) > 0, 'Empty data received');
+        
+        // Works with all log levels
+        $this->logInfoIf($verbose, 'Processing started', ['count' => count($data)]);
+        $this->logErrorUnless($this->validate($data), 'Validation failed');
+    }
+}
+```
+
+### Log with Timer
+
+Measure execution time of operations:
+
+```php
+use ERRORToolkit\Traits\ErrorLog;
+
+class PerformanceService {
+    use ErrorLog;
+
+    public function heavyOperation() {
+        // Execute callback and log duration
+        $result = $this->logInfoWithTimer(function() {
+            // Heavy processing...
+            return $this->processData();
+        }, 'Heavy operation');
+        // Logs: "Heavy operation (completed in 123.45 ms)"
+        
+        return $result;
+    }
+
+    public function apiCall() {
+        // Works with all log levels
+        return $this->logDebugWithTimer(function() {
+            return file_get_contents('https://api.example.com/data');
+        }, 'API request');
+    }
+}
+```
+
+### Log and Return
+
+Log a message and return a value in one call:
+
+```php
+use ERRORToolkit\Traits\ErrorLog;
+
+class Calculator {
+    use ErrorLog;
+
+    public function calculate(int $value): int {
+        $result = $value * 2;
+        
+        // Log and return in one call
+        return $this->logDebugAndReturn($result, 'Calculation complete', ['input' => $value]);
+    }
+    
+    public function findUser(int $id): ?User {
+        $user = $this->repository->find($id);
+        
+        return $user !== null 
+            ? $this->logInfoAndReturn($user, 'User found', ['id' => $id])
+            : $this->logWarningAndReturn(null, 'User not found', ['id' => $id]);
+    }
+}
+```
+
+### Log Exceptions
+
+Log exceptions with full stack trace:
+
+```php
+use ERRORToolkit\Traits\ErrorLog;
+use Psr\Log\LogLevel;
+
+class ExceptionHandler {
+    use ErrorLog;
+
+    public function handle(\Throwable $e): void {
+        // Log exception with full context (file, line, trace)
+        self::logException($e);
+        
+        // With custom log level
+        self::logException($e, LogLevel::CRITICAL);
+        
+        // With additional context
+        self::logException($e, LogLevel::ERROR, ['user_id' => 123]);
+    }
+}
+```
+
 ### Log and Throw Exceptions
 
 Combine logging and exception throwing in a single call with `log{Level}AndThrow()`:
@@ -249,17 +360,14 @@ class ValidationService {
 **Available log-and-throw methods:**
 
 | Method | Log Level |
-|--------|-----------|
-| `logDebugAndThrow()` | DEBUG |
-| `logInfoAndThrow()` | INFO |
-| `logNoticeAndThrow()` | NOTICE |
-| `logWarningAndThrow()` | WARNING |
+| ------ | --------- |
 | `logErrorAndThrow()` | ERROR |
 | `logCriticalAndThrow()` | CRITICAL |
 | `logAlertAndThrow()` | ALERT |
 | `logEmergencyAndThrow()` | EMERGENCY |
 
 **Method signature:**
+
 ```php
 log{Level}AndThrow(
     string $exceptionClass,    // Exception class to throw (e.g., RuntimeException::class)
@@ -407,10 +515,76 @@ vendor/bin/phpunit
 ## Cross-Platform Terminal Support
 
 The toolkit automatically detects:
+
 - Windows VT100 support via `sapi_windows_vt100_support()`
 - Unix/Linux TTY via `posix_isatty()`
 - Debug consoles (VS Code, PHPStorm, etc.)
 - PHPUnit color configuration
+
+## Helper Classes
+
+### OsHelper
+
+Cross-platform operating system detection and utilities:
+
+```php
+use ERRORToolkit\Helper\OsHelper;
+
+// OS Detection
+OsHelper::isWindows();    // true on Windows
+OsHelper::isLinux();      // true on Linux
+OsHelper::isMacOS();      // true on macOS
+OsHelper::isUnix();       // true on Linux or macOS
+OsHelper::getOsName();    // 'Windows', 'Linux', 'macOS'
+
+// Path Utilities
+OsHelper::getPathSeparator();     // '\' on Windows, '/' on Unix
+OsHelper::getEnvPathSeparator();  // ';' on Windows, ':' on Unix
+OsHelper::getHomeDirectory();     // User's home directory
+OsHelper::getTempDirectory();     // System temp directory
+
+// Executable Utilities
+OsHelper::isExecutable('/path/to/file');  // Check if file is executable
+OsHelper::findExecutable('git');          // Find executable in PATH
+
+// User Information
+OsHelper::getCurrentUsername();   // Current user name
+OsHelper::getCurrentUserId();     // UID (Unix only)
+OsHelper::isPrivilegedUser();     // Check for root/admin
+
+// System Information
+OsHelper::getCpuCoreCount();      // Number of CPU cores
+OsHelper::getArchitecture();      // System architecture (x86_64, arm64, etc.)
+OsHelper::getKernelVersion();     // Kernel version
+OsHelper::getSystemInfo();        // Complete system info array
+
+// Environment Variables
+OsHelper::getEnv('HOME', '/default');  // Get env var with default
+OsHelper::setEnv('MY_VAR', 'value');   // Set env var
+```
+
+### TerminalHelper
+
+Terminal detection and capabilities:
+
+```php
+use ERRORToolkit\Helper\TerminalHelper;
+
+TerminalHelper::isTerminal();      // Check if running in terminal
+TerminalHelper::isDebugConsole();  // Check if running in debug console
+TerminalHelper::getCursorColumn(); // Get current cursor position
+```
+
+### PhpUnitHelper
+
+PHPUnit-specific utilities:
+
+```php
+use ERRORToolkit\Helper\PhpUnitHelper;
+
+PhpUnitHelper::isRunningInPhpunit();  // Check if running in PHPUnit
+PhpUnitHelper::supportsColors();      // Check PHPUnit color configuration
+```
 
 ## Architecture
 
@@ -418,6 +592,7 @@ The toolkit automatically detects:
 - **Strategy Pattern** - Different logging strategies (Console, File, Null)
 - **Registry Pattern** - Global logger management
 - **Trait-based** - Easy integration via `ErrorLog` trait
+- **Helper Classes** - Reusable utilities for OS detection, terminal handling, PHPUnit support
 - **PSR-3 Compliant** - Standard logging interface
 
 ## License
@@ -426,9 +601,10 @@ MIT License. See [LICENSE](LICENSE) file for details.
 
 ## Author
 
-**Daniel Jörg Schuppelius**
+Daniel Jörg Schuppelius
+
 - Website: [schuppelius.org](https://schuppelius.org)
-- Email: info@schuppelius.org
+- Email: <info@schuppelius.org>
 
 ## Contributing
 
