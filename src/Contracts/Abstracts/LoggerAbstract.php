@@ -36,6 +36,13 @@ abstract class LoggerAbstract implements LoggerInterface {
     }
 
     /**
+     * Destructor: Gibt ausstehende Log-Einträge aus.
+     */
+    public function __destruct() {
+        $this->flushDuplicates();
+    }
+
+    /**
      * Aktiviert oder deaktiviert die Deduplizierung von Log-Einträgen.
      * 
      * @param bool $enabled True um Deduplizierung zu aktivieren
