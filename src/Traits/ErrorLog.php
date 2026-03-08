@@ -43,6 +43,12 @@ use Throwable;
  * @method static void logAlert(string $message, array $context = [])
  * @method static void logEmergency(string $message, array $context = [])
  * 
+ * Log and throw methods (log message and throw exception, never returns):
+ * @method static never logErrorAndThrow(string $exceptionClass, string $message, array $context = [], ?Throwable $previous = null, int $code = 0)
+ * @method static never logCriticalAndThrow(string $exceptionClass, string $message, array $context = [], ?Throwable $previous = null, int $code = 0)
+ * @method static never logAlertAndThrow(string $exceptionClass, string $message, array $context = [], ?Throwable $previous = null, int $code = 0)
+ * @method static never logEmergencyAndThrow(string $exceptionClass, string $message, array $context = [], ?Throwable $previous = null, int $code = 0)
+ * 
  * Conditional logging methods (log if condition is true):
  * @method void logDebugIf(bool $condition, string $message, array $context = [])
  * @method void logInfoIf(bool $condition, string $message, array $context = [])
