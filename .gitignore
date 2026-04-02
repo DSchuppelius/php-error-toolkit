@@ -417,3 +417,6 @@ yarn-error.log
 /.settings/
 /.buildpath
 /.project
+
+# PHPStan
+/var/phpstan
