@@ -16,4 +16,9 @@ use Psr\Log\LoggerInterface;
 
 interface LoggerFactoryInterface {
     public static function getLogger(): LoggerInterface;
+
+    /**
+     * Setzt den Logger zurück (nützlich für Tests oder Neukonfiguration).
+     */
+    public static function resetLogger(): void;
 }

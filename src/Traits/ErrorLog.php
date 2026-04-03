@@ -206,18 +206,17 @@ trait ErrorLog {
             self::$logger->log($level, $message, $context);
         } else {
             // Fallback-Logging
-            openlog(self::detectProjectName(), LOG_PID | LOG_PERROR, defined('LOG_LOCAL0') ? LOG_LOCAL0 : LOG_USER);
-
             $logString = sprintf("[%s] [%s] %s", date('Y-m-d H:i:s'), ucfirst($level), $message);
 
             if (ini_get('error_log')) {
                 error_log($logString);
             } elseif (function_exists('syslog')) {
+                openlog(self::detectProjectName(), LOG_PID | LOG_PERROR, defined('LOG_LOCAL0') ? LOG_LOCAL0 : LOG_USER);
                 syslog(self::getSyslogLevel($level), $logString);
+                closelog();
             } else {
-                file_put_contents(sys_get_temp_dir() . "/php-error-toolkit.log", $logString . PHP_EOL, FILE_APPEND);
+                file_put_contents(sys_get_temp_dir() . "/php-error-toolkit.log", $logString . PHP_EOL, FILE_APPEND | LOCK_EX);
             }
-            closelog();
         }
     }
 

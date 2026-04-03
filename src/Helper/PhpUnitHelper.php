@@ -17,9 +17,8 @@ class PhpUnitHelper {
      * Prüft, ob PHPUnit läuft.
      */
     public static function isRunningInPhpunit(): bool {
-        return defined('PHPUNIT_COMPOSER_INSTALL') ||
-            class_exists('PHPUnit\\Framework\\TestCase', false) ||
-            (isset($_SERVER['argv']) && strpos(implode(' ', $_SERVER['argv']), 'phpunit') !== false);
+        return class_exists('PHPUnit\\Framework\\TestCase', false) ||
+            (isset($_SERVER['argv']) && str_contains(implode(' ', $_SERVER['argv']), 'phpunit'));
     }
 
     /**
@@ -29,15 +28,15 @@ class PhpUnitHelper {
         // Kommandozeilen-Argumente haben Priorität über XML-Konfiguration
         if (isset($_SERVER['argv'])) {
             $args = implode(' ', $_SERVER['argv']);
-            if (strpos($args, '--colors=never') !== false || strpos($args, '--no-colors') !== false) {
+            if (str_contains($args, '--colors=never') || str_contains($args, '--no-colors')) {
                 return false;
             }
 
-            if (strpos($args, '--colors=always') !== false) {
+            if (str_contains($args, '--colors=always')) {
                 return true;
             }
 
-            if (strpos($args, '--colors=auto') !== false || strpos($args, '--colors') !== false) {
+            if (str_contains($args, '--colors=auto') || str_contains($args, '--colors')) {
                 // Debug Console sollte bei --colors=auto auch Farben unterstützen
                 return TerminalHelper::isDebugConsole() || TerminalHelper::isTerminal();
             }
@@ -83,7 +82,9 @@ class PhpUnitHelper {
 
         foreach ($configFiles as $configFile) {
             if (file_exists($configFile)) {
-                $xml = @simplexml_load_file($configFile);
+                $previousUseErrors = libxml_use_internal_errors(true);
+                $xml = simplexml_load_file($configFile, options: LIBXML_NONET);
+                libxml_use_internal_errors($previousUseErrors);
                 if ($xml !== false && isset($xml['colors'])) {
                     return (string)$xml['colors'];
                 }

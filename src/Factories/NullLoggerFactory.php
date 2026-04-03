@@ -25,4 +25,11 @@ class NullLoggerFactory implements LoggerFactoryInterface {
         }
         return self::$logger;
     }
+
+    /**
+     * Setzt den Logger zurück (nützlich für Tests oder Neukonfiguration).
+     */
+    public static function resetLogger(): void {
+        self::$logger = null;
+    }
 }

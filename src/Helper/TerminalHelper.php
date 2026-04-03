@@ -103,7 +103,14 @@ class TerminalHelper {
             fwrite($term, "\033[6n");
             fclose($term);
 
-            $buf = fread(STDIN, 16);
+            // Non-blocking Read mit Timeout (1 Sekunde) um Hänger zu vermeiden
+            $read = [STDIN];
+            $write = null;
+            $except = null;
+            $buf = '';
+            if (stream_select($read, $write, $except, 1) > 0) {
+                $buf = fread(STDIN, 16);
+            }
 
             system("stty '$ttyProps' 2>/dev/null");
 

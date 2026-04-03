@@ -18,7 +18,7 @@ use Psr\Log\LogLevel;
 
 class ConsoleLogger extends LoggerAbstract {
 
-    protected array $levelColors = [
+    private const array LEVEL_COLORS = [
         'emergency' => "\033[1;31m", // Rot
         'alert'     => "\033[1;31m", // Rot
         'critical'  => "\033[1;35m", // Magenta
@@ -29,7 +29,7 @@ class ConsoleLogger extends LoggerAbstract {
         'debug'     => "\033[0;36m", // Cyan
     ];
 
-    protected string $resetColor = "\033[0m"; // Zurücksetzen auf Standard
+    private const string RESET_COLOR = "\033[0m"; // Zurücksetzen auf Standard
 
     public function __construct(string $logLevel = LogLevel::DEBUG, bool $enableDeduplication = true) {
         parent::__construct($logLevel, $enableDeduplication);
@@ -37,19 +37,16 @@ class ConsoleLogger extends LoggerAbstract {
 
     protected function writeLog(string $logEntry, string $level): void {
         if (TerminalHelper::supportsColors()) {
-            $color = $this->levelColors[strtolower($level)] ?? $this->resetColor;
-            $output = $color . $logEntry . $this->resetColor;
+            $color = self::LEVEL_COLORS[strtolower($level)] ?? self::RESET_COLOR;
+            $output = $color . $logEntry . self::RESET_COLOR;
         } else {
             $output = $logEntry;
         }
 
-        if (TerminalHelper::isTerminal()) {
-            if (!TerminalHelper::isNewline()) {
-                echo PHP_EOL;
-            }
-            echo $output . PHP_EOL;
-        } else {
-            echo PHP_EOL . $output;
+        if (TerminalHelper::isTerminal() && !TerminalHelper::isNewline()) {
+            echo PHP_EOL;
         }
+
+        echo $output . PHP_EOL;
     }
 }

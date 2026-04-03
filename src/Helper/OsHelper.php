@@ -76,7 +76,7 @@ class OsHelper {
      */
     public static function getHomeDirectory(): string {
         if (self::isWindows()) {
-            return $_SERVER['USERPROFILE'] ?? $_SERVER['HOMEDRIVE'] . $_SERVER['HOMEPATH'] ?? '';
+            return $_SERVER['USERPROFILE'] ?? (($_SERVER['HOMEDRIVE'] ?? '') . ($_SERVER['HOMEPATH'] ?? '')) ?: '';
         }
         return $_SERVER['HOME'] ?? '';
     }
@@ -190,7 +190,11 @@ class OsHelper {
      * Gibt Umgebungsvariable zurück mit optional Default-Wert.
      */
     public static function getEnv(string $name, ?string $default = null): ?string {
-        $value = $_SERVER[$name] ?? getenv($name);
+        if (isset($_SERVER[$name])) {
+            return $_SERVER[$name];
+        }
+
+        $value = getenv($name, local_only: true);
         return $value !== false ? $value : $default;
     }
 

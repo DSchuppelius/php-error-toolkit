@@ -23,8 +23,9 @@ class FileLogger extends LoggerAbstract {
     protected int $maxFileSize; // in Bytes
     protected bool $rotateLogs; // ob ein Archiv erstellt werden soll
     protected int $filePermissions; // Berechtigungen für neue Logdateien
+    protected bool $writeBom; // ob UTF-8 BOM geschrieben werden soll
 
-    public function __construct(?string $logFile = null, string $logLevel = LogLevel::DEBUG, bool $failSafe = true, int $maxFileSize = 5242880, bool $rotateLogs = true, bool $enableDeduplication = true, int $filePermissions = 0660) {
+    public function __construct(?string $logFile = null, string $logLevel = LogLevel::DEBUG, bool $failSafe = true, int $maxFileSize = 5242880, bool $rotateLogs = true, bool $enableDeduplication = true, int $filePermissions = 0660, bool $writeBom = true) {
         parent::__construct($logLevel, $enableDeduplication);
 
         // Standard-Logdatei, falls die gegebene Datei nicht beschreibbar ist
@@ -36,6 +37,7 @@ class FileLogger extends LoggerAbstract {
         $this->maxFileSize = $maxFileSize;
         $this->rotateLogs = $rotateLogs;
         $this->filePermissions = $filePermissions;
+        $this->writeBom = $writeBom;
 
         $logDir = dirname($logFile);
 
@@ -45,9 +47,10 @@ class FileLogger extends LoggerAbstract {
             throw new FileNotWrittenException("Logverzeichnis konnte nicht erstellt werden: $logDir");
         }
 
-        // Sicherstellen, dass die Datei existiert und UTF-8-BOM enthält
+        // Sicherstellen, dass die Datei existiert
         if (!file_exists($logFile)) {
-            if (@file_put_contents($logFile, "\xEF\xBB\xBF") === false) { // UTF-8 BOM setzen
+            $initialContent = $this->writeBom ? "\xEF\xBB\xBF" : '';
+            if (@file_put_contents($logFile, $initialContent) === false) {
                 $this->handleWriteError("Fehler beim Erstellen der Logdatei");
             }
             @chmod($logFile, $this->filePermissions);
@@ -55,8 +58,12 @@ class FileLogger extends LoggerAbstract {
     }
 
     protected function writeLog(string $logEntry, string $level): void {
-        // Log-Eintrag in UTF-8 umwandeln
-        $logEntry = mb_convert_encoding($logEntry . PHP_EOL, 'UTF-8', 'auto');
+        $logEntry .= PHP_EOL;
+
+        // Log-Eintrag in UTF-8 umwandeln (nur wenn nötig)
+        if (!mb_check_encoding($logEntry, 'UTF-8')) {
+            $logEntry = mb_convert_encoding($logEntry, 'UTF-8', 'ISO-8859-1');
+        }
 
         // Prüfen auf maximale Dateigröße (mit clearstatcache für aktuelle Werte)
         clearstatcache(true, $this->logFile);
@@ -69,7 +76,8 @@ class FileLogger extends LoggerAbstract {
             clearstatcache(true, $this->logFile);
             // Datei existiert möglicherweise nicht mehr nach Rotation durch anderen Prozess
             if (!file_exists($this->logFile)) {
-                @file_put_contents($this->logFile, "\xEF\xBB\xBF");
+                $initialContent = $this->writeBom ? "\xEF\xBB\xBF" : '';
+                @file_put_contents($this->logFile, $initialContent);
                 @chmod($this->logFile, $this->filePermissions);
             }
             if (@file_put_contents($this->logFile, $logEntry, FILE_APPEND | LOCK_EX) === false) {
@@ -122,9 +130,8 @@ class FileLogger extends LoggerAbstract {
 
             $this->doRotate();
         } finally {
-            flock($lockHandle, LOCK_UN);
-            fclose($lockHandle);
-            @unlink($lockFile);
+            @flock($lockHandle, LOCK_UN);
+            @fclose($lockHandle);
         }
     }
 
@@ -139,14 +146,16 @@ class FileLogger extends LoggerAbstract {
                 return;
             }
         } else {
-            if (@file_put_contents($this->logFile, "\xEF\xBB\xBF") === false) {
+            $initialContent = $this->writeBom ? "\xEF\xBB\xBF" : '';
+            if (@file_put_contents($this->logFile, $initialContent) === false) {
                 $this->handleWriteError("Fehler beim Leeren der Logdatei");
             }
         }
 
         // Neue Logdatei mit korrekten Berechtigungen erstellen
         if (!file_exists($this->logFile)) {
-            @file_put_contents($this->logFile, "\xEF\xBB\xBF");
+            $initialContent = $this->writeBom ? "\xEF\xBB\xBF" : '';
+            @file_put_contents($this->logFile, $initialContent);
             @chmod($this->logFile, $this->filePermissions);
         }
     }

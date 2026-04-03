@@ -13,11 +13,11 @@ declare(strict_types=1);
 namespace ERRORToolkit\Exceptions\FileSystem;
 
 use ERRORToolkit\Exceptions\FileSystemException;
-use Exception;
+use Throwable;
 
 final class FileExistsException extends FileSystemException {
 
-    public function __construct($message = '', int $code = 0, ?Exception $previous = null) {
+    public function __construct(string $message = '', int $code = 0, ?Throwable $previous = null) {
         parent::__construct($message, $code, $previous);
     }
 }

@@ -12,11 +12,11 @@ declare(strict_types=1);
 
 namespace ERRORToolkit\Exceptions;
 
-use Exception;
 use RuntimeException;
+use Throwable;
 
 class FileSystemException extends RuntimeException {
-    public function __construct($message = '', int $code = 0, ?Exception $previous = null) {
+    public function __construct(string $message = '', int $code = 0, ?Throwable $previous = null) {
         parent::__construct($message, $code, $previous);
     }
 }

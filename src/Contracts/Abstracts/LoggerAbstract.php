@@ -101,7 +101,12 @@ abstract class LoggerAbstract implements LoggerInterface {
      * Erzeugt einen eindeutigen Schlüssel für einen Log-Eintrag zur Deduplizierung.
      */
     protected function createLogKey(string $level, string|Stringable $message, array $context): string {
-        return md5($level . '|' . (string)$message . '|' . json_encode($context));
+        $contextKey = '';
+        if (!empty($context)) {
+            $encoded = json_encode($context, JSON_UNESCAPED_UNICODE);
+            $contextKey = $encoded !== false ? $encoded : 'unserializable:' . json_last_error_msg();
+        }
+        return $level . '|' . (string)$message . '|' . $contextKey;
     }
 
     public function setLogLevel(string $logLevel): void {
@@ -127,7 +132,7 @@ abstract class LoggerAbstract implements LoggerInterface {
      * Liste der internen Trait/Logger-Methoden, die im Backtrace übersprungen werden sollen.
      * Diese Liste wird sowohl von LoggerAbstract als auch vom ErrorLog Trait verwendet.
      */
-    public static array $internalMethods = [
+    protected const INTERNAL_METHODS = [
         // ErrorLog Trait Methoden
         'logInternal',
         'handleMagicCall',
@@ -191,7 +196,7 @@ abstract class LoggerAbstract implements LoggerInterface {
             $class = $frame['class'] ?? null;
 
             // Überspringe interne Methoden
-            if (in_array($function, self::$internalMethods, true)) {
+            if (in_array($function, self::INTERNAL_METHODS, true)) {
                 continue;
             }
 
@@ -283,11 +288,10 @@ abstract class LoggerAbstract implements LoggerInterface {
         $this->writeLog($logEntry, $level);
     }
 
-    public function generateLogEntry($level, string|Stringable $message, array $context = []): string {
+    protected function generateLogEntry(string $level, string|Stringable $message, array $context = []): string {
         $timestamp = date('Y-m-d H:i:s');
-        // Bei DEBUG-Level (7) werden Datei und Zeile inkludiert
         $caller = self::getCallerFunction($this->logLevel === 7);
-        $contextString = empty($context) ? "" : " " . json_encode($context);
+        $contextString = empty($context) ? '' : ' ' . json_encode($context);
         return "[{$timestamp}] {$level} [{$caller}]: {$message}{$contextString}";
     }
 
