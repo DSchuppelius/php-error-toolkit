@@ -22,8 +22,9 @@ class FileLogger extends LoggerAbstract {
     protected bool $isLoggingError = false;
     protected int $maxFileSize; // in Bytes
     protected bool $rotateLogs; // ob ein Archiv erstellt werden soll
+    protected int $filePermissions; // Berechtigungen für neue Logdateien
 
-    public function __construct(?string $logFile = null, string $logLevel = LogLevel::DEBUG, bool $failSafe = true, int $maxFileSize = 5242880, bool $rotateLogs = true, bool $enableDeduplication = true) {
+    public function __construct(?string $logFile = null, string $logLevel = LogLevel::DEBUG, bool $failSafe = true, int $maxFileSize = 5242880, bool $rotateLogs = true, bool $enableDeduplication = true, int $filePermissions = 0666) {
         parent::__construct($logLevel, $enableDeduplication);
 
         // Standard-Logdatei, falls die gegebene Datei nicht beschreibbar ist
@@ -34,6 +35,7 @@ class FileLogger extends LoggerAbstract {
         $this->logFile = $logFile;
         $this->maxFileSize = $maxFileSize;
         $this->rotateLogs = $rotateLogs;
+        $this->filePermissions = $filePermissions;
 
         $logDir = dirname($logFile);
 
@@ -48,6 +50,7 @@ class FileLogger extends LoggerAbstract {
             if (@file_put_contents($logFile, "\xEF\xBB\xBF") === false) { // UTF-8 BOM setzen
                 $this->handleWriteError("Fehler beim Erstellen der Logdatei");
             }
+            @chmod($logFile, $this->filePermissions);
         }
     }
 
@@ -55,26 +58,21 @@ class FileLogger extends LoggerAbstract {
         // Log-Eintrag in UTF-8 umwandeln
         $logEntry = mb_convert_encoding($logEntry . PHP_EOL, 'UTF-8', 'auto');
 
-        // Prüfen auf maximale Dateigröße
+        // Prüfen auf maximale Dateigröße (mit clearstatcache für aktuelle Werte)
+        clearstatcache(true, $this->logFile);
         if (file_exists($this->logFile) && filesize($this->logFile) >= $this->maxFileSize) {
             $this->rotateLogFile();
         }
 
-        if (!is_writable($this->logFile)) {
-            $this->fallbackToConsole("Logdatei ist nicht beschreibbar: " . $this->logFile);
-            throw new FileNotWrittenException("Logdatei ist nicht beschreibbar: " . $this->logFile);
-        }
-
-        // Stream-Kontext für UTF-8-Schreiben nutzen
-        $context = stream_context_create([
-            'http' => [
-                'header' => "Content-Type: text/plain; charset=UTF-8"
-            ]
-        ]);
-
-        if (@file_put_contents($this->logFile, $logEntry, FILE_APPEND, $context) === false) {
-            clearstatcache(true, $this->logFile); // Cache leeren für zweite Chance
-            if (@file_put_contents($this->logFile, $logEntry, FILE_APPEND, $context) === false) {
+        // Datei mit exklusivem Lock schreiben (atomar, prozesssicher)
+        if (@file_put_contents($this->logFile, $logEntry, FILE_APPEND | LOCK_EX) === false) {
+            clearstatcache(true, $this->logFile);
+            // Datei existiert möglicherweise nicht mehr nach Rotation durch anderen Prozess
+            if (!file_exists($this->logFile)) {
+                @file_put_contents($this->logFile, "\xEF\xBB\xBF");
+                @chmod($this->logFile, $this->filePermissions);
+            }
+            if (@file_put_contents($this->logFile, $logEntry, FILE_APPEND | LOCK_EX) === false) {
                 $this->handleWriteError("Fehler beim Schreiben in die Logdatei");
             }
         }
@@ -89,16 +87,67 @@ class FileLogger extends LoggerAbstract {
         $this->maxFileSize = $bytes;
     }
 
+    public function getFilePermissions(): int {
+        return $this->filePermissions;
+    }
+
+    public function setFilePermissions(int $permissions): void {
+        $this->filePermissions = $permissions;
+    }
+
     private function rotateLogFile(): void {
+        // Lock-Datei verwenden um Race Conditions bei paralleler Rotation zu verhindern
+        $lockFile = $this->logFile . '.lock';
+        $lockHandle = @fopen($lockFile, 'c');
+
+        if ($lockHandle === false) {
+            // Fallback: Rotation ohne Lock versuchen
+            $this->doRotate();
+            return;
+        }
+
+        try {
+            // Nicht-blockierendes Lock: Wenn ein anderer Prozess bereits rotiert, überspringen
+            if (!flock($lockHandle, LOCK_EX | LOCK_NB)) {
+                // Ein anderer Prozess rotiert gerade - einfach weitermachen
+                return;
+            }
+
+            // Erneut prüfen nach Lock-Erwerb (Double-Check-Pattern)
+            clearstatcache(true, $this->logFile);
+            if (!file_exists($this->logFile) || filesize($this->logFile) < $this->maxFileSize) {
+                // Ein anderer Prozess hat bereits rotiert
+                return;
+            }
+
+            $this->doRotate();
+        } finally {
+            flock($lockHandle, LOCK_UN);
+            fclose($lockHandle);
+            @unlink($lockFile);
+        }
+    }
+
+    private function doRotate(): void {
         if ($this->rotateLogs) {
             $archiveFile = $this->logFile . '.' . date('Ymd_His');
             if (!@rename($this->logFile, $archiveFile)) {
-                $this->handleWriteError("Fehler beim Rotieren der Logdatei");
+                // Datei wurde möglicherweise bereits durch einen anderen Prozess rotiert
+                if (file_exists($this->logFile)) {
+                    $this->handleWriteError("Fehler beim Rotieren der Logdatei");
+                }
+                return;
             }
         } else {
-            if (!@file_put_contents($this->logFile, "\xEF\xBB\xBF") === false) {
+            if (@file_put_contents($this->logFile, "\xEF\xBB\xBF") === false) {
                 $this->handleWriteError("Fehler beim Leeren der Logdatei");
             }
+        }
+
+        // Neue Logdatei mit korrekten Berechtigungen erstellen
+        if (!file_exists($this->logFile)) {
+            @file_put_contents($this->logFile, "\xEF\xBB\xBF");
+            @chmod($this->logFile, $this->filePermissions);
         }
     }
 
