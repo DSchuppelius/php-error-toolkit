@@ -24,7 +24,7 @@ class FileLogger extends LoggerAbstract {
     protected bool $rotateLogs; // ob ein Archiv erstellt werden soll
     protected int $filePermissions; // Berechtigungen für neue Logdateien
 
-    public function __construct(?string $logFile = null, string $logLevel = LogLevel::DEBUG, bool $failSafe = true, int $maxFileSize = 5242880, bool $rotateLogs = true, bool $enableDeduplication = true, int $filePermissions = 0666) {
+    public function __construct(?string $logFile = null, string $logLevel = LogLevel::DEBUG, bool $failSafe = true, int $maxFileSize = 5242880, bool $rotateLogs = true, bool $enableDeduplication = true, int $filePermissions = 0660) {
         parent::__construct($logLevel, $enableDeduplication);
 
         // Standard-Logdatei, falls die gegebene Datei nicht beschreibbar ist
