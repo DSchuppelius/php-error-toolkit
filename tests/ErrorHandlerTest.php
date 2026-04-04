@@ -452,7 +452,7 @@ class ErrorHandlerTest extends TestCase {
             ->with(
                 $expectedLevel,
                 $this->stringContains($messageContains),
-                $this->isType('array')
+                $this->callback(fn(mixed $value): bool => is_array($value))
             );
         return $logger;
     }
