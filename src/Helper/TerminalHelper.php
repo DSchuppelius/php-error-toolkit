@@ -109,12 +109,15 @@ class TerminalHelper {
             $except = null;
             $buf = '';
             if (stream_select($read, $write, $except, 1) > 0) {
-                $buf = fread(STDIN, 16);
+                $result = fread(STDIN, 16);
+                if (is_string($result)) {
+                    $buf = $result;
+                }
             }
 
             system("stty '$ttyProps' 2>/dev/null");
 
-            if (preg_match('/^\033\[(\d+);(\d+)R$/', $buf, $matches)) {
+            if ($buf !== '' && preg_match('/^\033\[(\d+);(\d+)R$/', $buf, $matches)) {
                 return (int)$matches[2];
             }
 
