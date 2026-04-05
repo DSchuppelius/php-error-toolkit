@@ -18,7 +18,7 @@ use Psr\Log\LogLevel;
 
 class ConsoleLogger extends LoggerAbstract {
 
-    private const array LEVEL_COLORS = [
+    private const LEVEL_COLORS = [
         'emergency' => "\033[1;31m", // Rot
         'alert'     => "\033[1;31m", // Rot
         'critical'  => "\033[1;35m", // Magenta
@@ -29,7 +29,7 @@ class ConsoleLogger extends LoggerAbstract {
         'debug'     => "\033[0;36m", // Cyan
     ];
 
-    private const string RESET_COLOR = "\033[0m"; // Zurücksetzen auf Standard
+    private const RESET_COLOR = "\033[0m"; // Zurücksetzen auf Standard
 
     public function __construct(string $logLevel = LogLevel::DEBUG, bool $enableDeduplication = true) {
         parent::__construct($logLevel, $enableDeduplication);

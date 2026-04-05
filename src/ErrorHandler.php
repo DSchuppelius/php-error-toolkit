@@ -45,7 +45,7 @@ class ErrorHandler {
     private ?string $memoryReserve = null;
 
     /** Standard-Größe des Memory-Buffers in Bytes (10 KB) */
-    private const int MEMORY_RESERVE_SIZE = 10240;
+    private const MEMORY_RESERVE_SIZE = 10240;
 
     /** Registrierte Callbacks pro LogLevel */
     private array $listeners = [];
@@ -54,7 +54,7 @@ class ErrorHandler {
     private static ?self $activeInstance = null;
 
     /** Error-Severity → PSR-3 LogLevel Mapping */
-    private const array SEVERITY_MAP = [
+    private const SEVERITY_MAP = [
         E_ERROR             => LogLevel::CRITICAL,
         E_WARNING           => LogLevel::WARNING,
         E_PARSE             => LogLevel::CRITICAL,
@@ -72,7 +72,7 @@ class ErrorHandler {
     ];
 
     /** Error-Severity → Menschenlesbarer Name */
-    private const array SEVERITY_NAMES = [
+    private const SEVERITY_NAMES = [
         E_ERROR             => 'E_ERROR',
         E_WARNING           => 'E_WARNING',
         E_PARSE             => 'E_PARSE',
@@ -90,7 +90,7 @@ class ErrorHandler {
     ];
 
     /** Fatale Error-Typen die im Shutdown-Handler erkannt werden */
-    private const array FATAL_ERRORS = [
+    private const FATAL_ERRORS = [
         E_ERROR,
         E_PARSE,
         E_CORE_ERROR,
