@@ -44,9 +44,9 @@ class ConsoleLogger extends LoggerAbstract {
         }
 
         if (TerminalHelper::isTerminal() && !TerminalHelper::isNewline()) {
-            echo PHP_EOL;
+            echo PHP_EOL . $output;
+        } else {
+            echo $output . PHP_EOL;
         }
-
-        echo $output . PHP_EOL;
     }
 }

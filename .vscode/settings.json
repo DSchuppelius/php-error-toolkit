@@ -1,0 +1,3 @@
+{
+    "phpstan.configPath": "phpstan.neon.dist",
+}
