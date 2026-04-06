@@ -31,8 +31,15 @@ class ConsoleLogger extends LoggerAbstract {
 
     private const RESET_COLOR = "\033[0m"; // Zurücksetzen auf Standard
 
-    public function __construct(string $logLevel = LogLevel::DEBUG, bool $enableDeduplication = true) {
+    /** @var resource */
+    private $stream;
+
+    /**
+     * @param resource|null $stream Output-Stream (Standard: STDERR)
+     */
+    public function __construct(string $logLevel = LogLevel::DEBUG, bool $enableDeduplication = true, $stream = null) {
         parent::__construct($logLevel, $enableDeduplication);
+        $this->stream = $stream ?? STDERR;
     }
 
     protected function writeLog(string $logEntry, string $level): void {
@@ -43,6 +50,6 @@ class ConsoleLogger extends LoggerAbstract {
             $output = $logEntry;
         }
 
-        fwrite(STDERR, $output . "\n");
+        fwrite($this->stream, $output . "\n");
     }
 }

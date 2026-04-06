@@ -17,8 +17,20 @@ use ERRORToolkit\Logger\ConsoleLogger;
 use Psr\Log\LogLevel;
 
 class ConsoleLoggerTest extends TestCase {
+
+    /** @return resource */
+    private static function createStream() {
+        return fopen('php://memory', 'r+');
+    }
+
+    private static function readStream($stream): string {
+        rewind($stream);
+        return stream_get_contents($stream) ?: '';
+    }
+
     public function testLogsInfoLevel() {
-        $logger = new ConsoleLogger(LogLevel::INFO);
+        $stream = self::createStream();
+        $logger = new ConsoleLogger(LogLevel::INFO, stream: $stream);
 
         // Diese Zeilen werden direkt auf der Konsole angezeigt (Deduplizierung aktiv)
         // Line 1 → gepuffert
@@ -31,10 +43,11 @@ class ConsoleLoggerTest extends TestCase {
         $logger->log(LogLevel::INFO, "Multiline Test: Line 3 - Trigger output");
         $logger->flushDuplicates(); // Line 3 ausgeben
 
-        ob_start();
-        $logger->log(LogLevel::INFO, "This is an info message");
-        $logger->flushDuplicates();
-        $output = ob_get_clean();
+        $stream2 = self::createStream();
+        $logger2 = new ConsoleLogger(LogLevel::INFO, stream: $stream2);
+        $logger2->log(LogLevel::INFO, "This is an info message");
+        $logger2->flushDuplicates();
+        $output = self::readStream($stream2);
 
         $this->assertStringContainsString("This is an info message", $output);
 
@@ -50,21 +63,21 @@ class ConsoleLoggerTest extends TestCase {
     }
 
     public function testDoesNotLogBelowThreshold() {
-        $logger = new ConsoleLogger(LogLevel::WARNING, enableDeduplication: false);
+        $stream = self::createStream();
+        $logger = new ConsoleLogger(LogLevel::WARNING, enableDeduplication: false, stream: $stream);
 
-        ob_start();
         $logger->log(LogLevel::INFO, "This info message should not appear");
-        $output = ob_get_clean();
+        $output = self::readStream($stream);
 
         $this->assertSame("", $output, "Es sollte keine Ausgabe geben, da INFO unterhalb der WARNING-Schwelle liegt.");
     }
 
     public function testLogsCriticalLevel() {
-        $logger = new ConsoleLogger(LogLevel::DEBUG, enableDeduplication: false); // DEBUG lässt alles loggen
+        $stream = self::createStream();
+        $logger = new ConsoleLogger(LogLevel::DEBUG, enableDeduplication: false, stream: $stream);
 
-        ob_start();
         $logger->log(LogLevel::CRITICAL, "System failure!");
-        $output = ob_get_clean();
+        $output = self::readStream($stream);
 
         $this->assertStringContainsString("System failure!", $output);
 
@@ -80,26 +93,26 @@ class ConsoleLoggerTest extends TestCase {
     }
 
     public function testLogsWithoutColorsWhenNotSupported() {
-        $logger = new ConsoleLogger(LogLevel::INFO, enableDeduplication: false);
+        $stream = self::createStream();
+        $logger = new ConsoleLogger(LogLevel::INFO, enableDeduplication: false, stream: $stream);
 
-        ob_start();
         $logger->log(LogLevel::INFO, "Plain text message");
-        $output = ob_get_clean();
+        $output = self::readStream($stream);
 
         $this->assertStringContainsString("Plain text message", $output);
     }
 
     public function testDeduplicationPreventsDuplicateLogs() {
-        $logger = new ConsoleLogger(LogLevel::INFO, enableDeduplication: true);
+        $stream = self::createStream();
+        $logger = new ConsoleLogger(LogLevel::INFO, enableDeduplication: true, stream: $stream);
 
-        ob_start();
         // Logge die gleiche Nachricht 5 mal
         for ($i = 0; $i < 5; $i++) {
             $logger->log(LogLevel::INFO, "Duplicate message");
         }
         // Flush um den letzten Eintrag auszugeben
         $logger->flushDuplicates();
-        $output = ob_get_clean();
+        $output = self::readStream($stream);
 
         // Es sollte nur ein Eintrag mit (x5) vorhanden sein
         $this->assertStringContainsString("Duplicate message (x5)", $output);
@@ -108,14 +121,14 @@ class ConsoleLoggerTest extends TestCase {
     }
 
     public function testDeduplicationAllowsDifferentMessages() {
-        $logger = new ConsoleLogger(LogLevel::INFO, enableDeduplication: true);
+        $stream = self::createStream();
+        $logger = new ConsoleLogger(LogLevel::INFO, enableDeduplication: true, stream: $stream);
 
-        ob_start();
         $logger->log(LogLevel::INFO, "Message A");
         $logger->log(LogLevel::INFO, "Message B");
         $logger->log(LogLevel::INFO, "Message A");
         $logger->flushDuplicates();
-        $output = ob_get_clean();
+        $output = self::readStream($stream);
 
         // Alle drei sollten einzeln geloggt werden (keine Duplikate hintereinander)
         $this->assertStringContainsString("Message A", $output);
@@ -125,14 +138,14 @@ class ConsoleLoggerTest extends TestCase {
     }
 
     public function testDeduplicationCanBeDisabled() {
-        $logger = new ConsoleLogger(LogLevel::INFO, enableDeduplication: false);
+        $stream = self::createStream();
+        $logger = new ConsoleLogger(LogLevel::INFO, enableDeduplication: false, stream: $stream);
         $this->assertFalse($logger->isDeduplicationEnabled());
 
-        ob_start();
         $logger->log(LogLevel::INFO, "Same message");
         $logger->log(LogLevel::INFO, "Same message");
         $logger->log(LogLevel::INFO, "Same message");
-        $output = ob_get_clean();
+        $output = self::readStream($stream);
 
         // Alle drei sollten einzeln geloggt werden
         $this->assertSame(3, substr_count($output, "Same message"));
@@ -140,15 +153,15 @@ class ConsoleLoggerTest extends TestCase {
     }
 
     public function testSetDeduplicationFlushesOnDisable() {
-        $logger = new ConsoleLogger(LogLevel::INFO, enableDeduplication: true);
+        $stream = self::createStream();
+        $logger = new ConsoleLogger(LogLevel::INFO, enableDeduplication: true, stream: $stream);
 
-        ob_start();
         $logger->log(LogLevel::INFO, "Repeated");
         $logger->log(LogLevel::INFO, "Repeated");
         $logger->log(LogLevel::INFO, "Repeated");
         // Deaktiviere Deduplizierung - sollte ausstehende Duplikate flushen
         $logger->setDeduplication(false);
-        $output = ob_get_clean();
+        $output = self::readStream($stream);
 
         $this->assertStringContainsString("Repeated (x3)", $output);
     }

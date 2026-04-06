@@ -43,11 +43,15 @@ class ErrorLogTestClass {
 class ErrorLogTraitTest extends TestCase {
     private ErrorLogTestClass $testInstance;
 
+    /** @var resource */
+    private $stream;
+
     protected function setUp(): void {
         $this->testInstance = new ErrorLogTestClass();
+        $this->stream = fopen('php://memory', 'r+');
         // Logger auf DEBUG setzen um alle Nachrichten zu erfassen
         // Deduplizierung deaktivieren für sofortige Ausgabe in Tests
-        $logger = new ConsoleLogger(LogLevel::DEBUG, enableDeduplication: false);
+        $logger = new ConsoleLogger(LogLevel::DEBUG, enableDeduplication: false, stream: $this->stream);
         LoggerRegistry::setLogger($logger);
         ErrorLogTestClass::setLogger($logger);
     }
@@ -56,13 +60,23 @@ class ErrorLogTraitTest extends TestCase {
         LoggerRegistry::resetLogger();
     }
 
+    private function getStreamOutput(): string {
+        rewind($this->stream);
+        return stream_get_contents($this->stream) ?: '';
+    }
+
+    private function resetStream(): void {
+        ftruncate($this->stream, 0);
+        rewind($this->stream);
+    }
+
     /**
      * Test: logInfo() als Instanzmethode
      */
     public function testLogInfoInstance(): void {
-        ob_start();
         $this->testInstance->logInfo("Test info message");
-        $output = ob_get_clean();
+        $output = $this->getStreamOutput();
+        $this->resetStream();
 
         $this->assertStringContainsString("Test info message", $output);
         $this->assertStringContainsString("info", strtolower($output));
@@ -72,9 +86,9 @@ class ErrorLogTraitTest extends TestCase {
      * Test: logError() als Instanzmethode
      */
     public function testLogErrorInstance(): void {
-        ob_start();
         $this->testInstance->logError("Test error message");
-        $output = ob_get_clean();
+        $output = $this->getStreamOutput();
+        $this->resetStream();
 
         $this->assertStringContainsString("Test error message", $output);
         $this->assertStringContainsString("error", strtolower($output));
@@ -84,9 +98,9 @@ class ErrorLogTraitTest extends TestCase {
      * Test: logWarning() als Instanzmethode
      */
     public function testLogWarningInstance(): void {
-        ob_start();
         $this->testInstance->logWarning("Test warning message");
-        $output = ob_get_clean();
+        $output = $this->getStreamOutput();
+        $this->resetStream();
 
         $this->assertStringContainsString("Test warning message", $output);
         $this->assertStringContainsString("warning", strtolower($output));
@@ -96,9 +110,9 @@ class ErrorLogTraitTest extends TestCase {
      * Test: logDebug() als Instanzmethode
      */
     public function testLogDebugInstance(): void {
-        ob_start();
         $this->testInstance->logDebug("Test debug message");
-        $output = ob_get_clean();
+        $output = $this->getStreamOutput();
+        $this->resetStream();
 
         $this->assertStringContainsString("Test debug message", $output);
         $this->assertStringContainsString("debug", strtolower($output));
@@ -108,9 +122,9 @@ class ErrorLogTraitTest extends TestCase {
      * Test: logCritical() als Instanzmethode
      */
     public function testLogCriticalInstance(): void {
-        ob_start();
         $this->testInstance->logCritical("Test critical message");
-        $output = ob_get_clean();
+        $output = $this->getStreamOutput();
+        $this->resetStream();
 
         $this->assertStringContainsString("Test critical message", $output);
         $this->assertStringContainsString("critical", strtolower($output));
@@ -120,9 +134,9 @@ class ErrorLogTraitTest extends TestCase {
      * Test: logInfo() als statische Methode
      */
     public function testLogInfoStatic(): void {
-        ob_start();
         ErrorLogTestClass::logInfo("Static info message");
-        $output = ob_get_clean();
+        $output = $this->getStreamOutput();
+        $this->resetStream();
 
         $this->assertStringContainsString("Static info message", $output);
         $this->assertStringContainsString("info", strtolower($output));
@@ -132,9 +146,9 @@ class ErrorLogTraitTest extends TestCase {
      * Test: logError() als statische Methode
      */
     public function testLogErrorStatic(): void {
-        ob_start();
         ErrorLogTestClass::logError("Static error message");
-        $output = ob_get_clean();
+        $output = $this->getStreamOutput();
+        $this->resetStream();
 
         $this->assertStringContainsString("Static error message", $output);
         $this->assertStringContainsString("error", strtolower($output));
@@ -147,11 +161,11 @@ class ErrorLogTraitTest extends TestCase {
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage("Error that throws");
 
-        ob_start();
         try {
             $this->testInstance->logErrorAndThrow(RuntimeException::class, "Error that throws");
         } finally {
-            $output = ob_get_clean();
+            $output = $this->getStreamOutput();
+            $this->resetStream();
             $this->assertStringContainsString("Error that throws", $output);
             $this->assertStringContainsString("error", strtolower($output));
         }
@@ -164,11 +178,11 @@ class ErrorLogTraitTest extends TestCase {
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage("Critical static error");
 
-        ob_start();
         try {
             ErrorLogTestClass::logCriticalAndThrow(RuntimeException::class, "Critical static error");
         } finally {
-            $output = ob_get_clean();
+            $output = $this->getStreamOutput();
+            $this->resetStream();
             $this->assertStringContainsString("Critical static error", $output);
             $this->assertStringContainsString("critical", strtolower($output));
         }
@@ -181,7 +195,6 @@ class ErrorLogTraitTest extends TestCase {
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage("Error with context");
 
-        ob_start();
         try {
             $this->testInstance->logErrorAndThrow(
                 RuntimeException::class,
@@ -189,7 +202,8 @@ class ErrorLogTraitTest extends TestCase {
                 ['user_id' => 123, 'action' => 'test']
             );
         } finally {
-            $output = ob_get_clean();
+            $output = $this->getStreamOutput();
+            $this->resetStream();
             $this->assertStringContainsString("Error with context", $output);
         }
     }
@@ -201,7 +215,6 @@ class ErrorLogTraitTest extends TestCase {
         $previousException = new Exception("Previous error");
 
         try {
-            ob_start();
             $this->testInstance->logErrorAndThrow(
                 RuntimeException::class,
                 "Chained error",
@@ -209,7 +222,6 @@ class ErrorLogTraitTest extends TestCase {
                 $previousException
             );
         } catch (RuntimeException $e) {
-            ob_get_clean();
             $this->assertSame("Chained error", $e->getMessage());
             $this->assertSame($previousException, $e->getPrevious());
             return;
@@ -248,9 +260,9 @@ class ErrorLogTraitTest extends TestCase {
             $method = 'log' . $level;
             $message = "Test {$level} message";
 
-            ob_start();
             $this->testInstance->$method($message);
-            $output = ob_get_clean();
+            $output = $this->getStreamOutput();
+            $this->resetStream();
 
             $this->assertStringContainsString($message, $output, "Level {$level} sollte geloggt werden");
         }
@@ -266,9 +278,9 @@ class ErrorLogTraitTest extends TestCase {
             $method = 'log' . $level;
             $message = "Static test {$level} message";
 
-            ob_start();
             ErrorLogTestClass::$method($message);
-            $output = ob_get_clean();
+            $output = $this->getStreamOutput();
+            $this->resetStream();
 
             $this->assertStringContainsString($message, $output, "Level {$level} sollte statisch geloggt werden");
         }
@@ -285,12 +297,11 @@ class ErrorLogTraitTest extends TestCase {
             $message = "AndThrow test for {$level}";
 
             try {
-                ob_start();
                 $this->testInstance->$method(RuntimeException::class, $message);
-                ob_get_clean();
                 $this->fail("Exception sollte geworfen werden für {$method}");
             } catch (RuntimeException $e) {
-                $output = ob_get_clean();
+                $output = $this->getStreamOutput();
+                $this->resetStream();
                 $this->assertSame($message, $e->getMessage());
                 $this->assertStringContainsString($message, $output);
             }
@@ -322,9 +333,9 @@ class ErrorLogTraitTest extends TestCase {
     public function testLogException(): void {
         $exception = new RuntimeException("Test exception message");
 
-        ob_start();
         ErrorLogTestClass::logException($exception);
-        $output = ob_get_clean();
+        $output = $this->getStreamOutput();
+        $this->resetStream();
 
         $this->assertStringContainsString("RuntimeException", $output);
         $this->assertStringContainsString("Test exception message", $output);
@@ -337,9 +348,9 @@ class ErrorLogTraitTest extends TestCase {
     public function testLogExceptionWithCustomLevel(): void {
         $exception = new InvalidArgumentException("Invalid argument");
 
-        ob_start();
         ErrorLogTestClass::logException($exception, LogLevel::WARNING);
-        $output = ob_get_clean();
+        $output = $this->getStreamOutput();
+        $this->resetStream();
 
         $this->assertStringContainsString("InvalidArgumentException", $output);
         $this->assertStringContainsString("warning", strtolower($output));
@@ -352,9 +363,9 @@ class ErrorLogTraitTest extends TestCase {
         $previous = new Exception("Previous exception");
         $exception = new RuntimeException("Main exception", 0, $previous);
 
-        ob_start();
         ErrorLogTestClass::logException($exception);
-        $output = ob_get_clean();
+        $output = $this->getStreamOutput();
+        $this->resetStream();
 
         $this->assertStringContainsString("Main exception", $output);
     }
@@ -363,9 +374,9 @@ class ErrorLogTraitTest extends TestCase {
      * Test: logWarningIf() loggt nur wenn Bedingung wahr ist
      */
     public function testLogWarningIfTrue(): void {
-        ob_start();
         ErrorLogTestClass::logWarningIf(true, "Should be logged");
-        $output = ob_get_clean();
+        $output = $this->getStreamOutput();
+        $this->resetStream();
 
         $this->assertStringContainsString("Should be logged", $output);
         $this->assertStringContainsString("warning", strtolower($output));
@@ -375,9 +386,9 @@ class ErrorLogTraitTest extends TestCase {
      * Test: logWarningIf() loggt nicht wenn Bedingung falsch ist
      */
     public function testLogWarningIfFalse(): void {
-        ob_start();
         ErrorLogTestClass::logWarningIf(false, "Should NOT be logged");
-        $output = ob_get_clean();
+        $output = $this->getStreamOutput();
+        $this->resetStream();
 
         $this->assertEmpty(trim($output));
     }
@@ -386,9 +397,9 @@ class ErrorLogTraitTest extends TestCase {
      * Test: logErrorUnless() loggt nur wenn Bedingung falsch ist
      */
     public function testLogErrorUnlessFalse(): void {
-        ob_start();
         ErrorLogTestClass::logErrorUnless(false, "Should be logged");
-        $output = ob_get_clean();
+        $output = $this->getStreamOutput();
+        $this->resetStream();
 
         $this->assertStringContainsString("Should be logged", $output);
         $this->assertStringContainsString("error", strtolower($output));
@@ -398,9 +409,9 @@ class ErrorLogTraitTest extends TestCase {
      * Test: logErrorUnless() loggt nicht wenn Bedingung wahr ist
      */
     public function testLogErrorUnlessTrue(): void {
-        ob_start();
         ErrorLogTestClass::logErrorUnless(true, "Should NOT be logged");
-        $output = ob_get_clean();
+        $output = $this->getStreamOutput();
+        $this->resetStream();
 
         $this->assertEmpty(trim($output));
     }
@@ -415,15 +426,15 @@ class ErrorLogTraitTest extends TestCase {
             $method = 'log' . $level . 'If';
 
             // Test mit true - sollte loggen
-            ob_start();
             ErrorLogTestClass::$method(true, "Conditional {$level} message");
-            $output = ob_get_clean();
+            $output = $this->getStreamOutput();
+            $this->resetStream();
             $this->assertStringContainsString("Conditional {$level} message", $output, "log{$level}If(true) sollte loggen");
 
             // Test mit false - sollte nicht loggen
-            ob_start();
             ErrorLogTestClass::$method(false, "Should not appear");
-            $output = ob_get_clean();
+            $output = $this->getStreamOutput();
+            $this->resetStream();
             $this->assertEmpty(trim($output), "log{$level}If(false) sollte nicht loggen");
         }
     }
@@ -438,15 +449,15 @@ class ErrorLogTraitTest extends TestCase {
             $method = 'log' . $level . 'Unless';
 
             // Test mit false - sollte loggen
-            ob_start();
             ErrorLogTestClass::$method(false, "Unless {$level} message");
-            $output = ob_get_clean();
+            $output = $this->getStreamOutput();
+            $this->resetStream();
             $this->assertStringContainsString("Unless {$level} message", $output, "log{$level}Unless(false) sollte loggen");
 
             // Test mit true - sollte nicht loggen
-            ob_start();
             ErrorLogTestClass::$method(true, "Should not appear");
-            $output = ob_get_clean();
+            $output = $this->getStreamOutput();
+            $this->resetStream();
             $this->assertEmpty(trim($output), "log{$level}Unless(true) sollte nicht loggen");
         }
     }
@@ -455,12 +466,12 @@ class ErrorLogTraitTest extends TestCase {
      * Test: logDebugWithTimer() führt Callback aus und loggt Zeit
      */
     public function testLogDebugWithTimer(): void {
-        ob_start();
         $result = ErrorLogTestClass::logDebugWithTimer(function () {
             usleep(10000); // 10ms warten
             return "timer result";
         }, "Test operation");
-        $output = ob_get_clean();
+        $output = $this->getStreamOutput();
+        $this->resetStream();
 
         $this->assertSame("timer result", $result);
         $this->assertStringContainsString("Test operation", $output);
@@ -473,11 +484,11 @@ class ErrorLogTraitTest extends TestCase {
      * Test: logInfoWithTimer() führt Callback aus und loggt Zeit auf Info-Level
      */
     public function testLogInfoWithTimer(): void {
-        ob_start();
         $result = ErrorLogTestClass::logInfoWithTimer(function () {
             return 42;
         }, "Calculate answer");
-        $output = ob_get_clean();
+        $output = $this->getStreamOutput();
+        $this->resetStream();
 
         $this->assertSame(42, $result);
         $this->assertStringContainsString("Calculate answer", $output);
@@ -491,13 +502,13 @@ class ErrorLogTraitTest extends TestCase {
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage("Timer callback failed");
 
-        ob_start();
         try {
             ErrorLogTestClass::logWarningWithTimer(function () {
                 throw new RuntimeException("Timer callback failed");
             }, "Failing operation");
         } finally {
-            $output = ob_get_clean();
+            $output = $this->getStreamOutput();
+            $this->resetStream();
             $this->assertStringContainsString("Failing operation", $output);
             $this->assertStringContainsString("failed", strtolower($output));
         }
@@ -512,11 +523,11 @@ class ErrorLogTraitTest extends TestCase {
         foreach ($levels as $level) {
             $method = 'log' . $level . 'WithTimer';
 
-            ob_start();
             $result = ErrorLogTestClass::$method(function () use ($level) {
                 return "result_{$level}";
             }, "Operation {$level}");
-            $output = ob_get_clean();
+            $output = $this->getStreamOutput();
+            $this->resetStream();
 
             $this->assertSame("result_{$level}", $result, "log{$level}WithTimer sollte Ergebnis zurückgeben");
             $this->assertStringContainsString("Operation {$level}", $output, "log{$level}WithTimer sollte Description loggen");
@@ -528,12 +539,12 @@ class ErrorLogTraitTest extends TestCase {
      * Test: logDebugAndReturn() loggt und gibt Wert zurück
      */
     public function testLogDebugAndReturn(): void {
-        ob_start();
         $result = ErrorLogTestClass::logDebugAndReturn(
             ["key" => "value"],
             "Returning data"
         );
-        $output = ob_get_clean();
+        $output = $this->getStreamOutput();
+        $this->resetStream();
 
         $this->assertSame(["key" => "value"], $result);
         $this->assertStringContainsString("Returning data", $output);
@@ -544,9 +555,9 @@ class ErrorLogTraitTest extends TestCase {
      * Test: logInfoAndReturn() loggt auf Info-Level und gibt Wert zurück
      */
     public function testLogInfoAndReturn(): void {
-        ob_start();
         $result = ErrorLogTestClass::logInfoAndReturn("string value", "String returned");
-        $output = ob_get_clean();
+        $output = $this->getStreamOutput();
+        $this->resetStream();
 
         $this->assertSame("string value", $result);
         $this->assertStringContainsString("String returned", $output);
@@ -563,9 +574,9 @@ class ErrorLogTraitTest extends TestCase {
             $method = 'log' . $level . 'AndReturn';
             $expectedValue = "value_{$level}";
 
-            ob_start();
             $result = ErrorLogTestClass::$method($expectedValue, "Return {$level} message");
-            $output = ob_get_clean();
+            $output = $this->getStreamOutput();
+            $this->resetStream();
 
             $this->assertSame($expectedValue, $result, "log{$level}AndReturn sollte Wert zurückgeben");
             $this->assertStringContainsString("Return {$level} message", $output, "log{$level}AndReturn sollte Nachricht loggen");
@@ -576,13 +587,13 @@ class ErrorLogTraitTest extends TestCase {
      * Test: logWarningAndReturn() mit Kontext
      */
     public function testLogWarningAndReturnWithContext(): void {
-        ob_start();
         $result = ErrorLogTestClass::logWarningAndReturn(
             null,
             "Warning with context",
             ['user_id' => 123]
         );
-        $output = ob_get_clean();
+        $output = $this->getStreamOutput();
+        $this->resetStream();
 
         $this->assertNull($result);
         $this->assertStringContainsString("Warning with context", $output);
@@ -593,9 +604,9 @@ class ErrorLogTraitTest extends TestCase {
      * Test: logInfoIf() als Instanzmethode
      */
     public function testLogInfoIfInstance(): void {
-        ob_start();
         $this->testInstance->logInfoIf(true, "Instance conditional log");
-        $output = ob_get_clean();
+        $output = $this->getStreamOutput();
+        $this->resetStream();
 
         $this->assertStringContainsString("Instance conditional log", $output);
     }
@@ -604,9 +615,9 @@ class ErrorLogTraitTest extends TestCase {
      * Test: logDebugAndReturn() als Instanzmethode
      */
     public function testLogDebugAndReturnInstance(): void {
-        ob_start();
         $result = $this->testInstance->logDebugAndReturn(100, "Instance return");
-        $output = ob_get_clean();
+        $output = $this->getStreamOutput();
+        $this->resetStream();
 
         $this->assertSame(100, $result);
         $this->assertStringContainsString("Instance return", $output);
@@ -616,11 +627,11 @@ class ErrorLogTraitTest extends TestCase {
      * Test: logInfoWithTimer() als Instanzmethode
      */
     public function testLogInfoWithTimerInstance(): void {
-        ob_start();
         $result = $this->testInstance->logInfoWithTimer(function () {
             return "instance timer result";
         }, "Instance timer operation");
-        $output = ob_get_clean();
+        $output = $this->getStreamOutput();
+        $this->resetStream();
 
         $this->assertSame("instance timer result", $result);
         $this->assertStringContainsString("Instance timer operation", $output);
@@ -713,7 +724,6 @@ class ErrorLogTraitTest extends TestCase {
      */
     public function testLogErrorAndThrowWithCode(): void {
         try {
-            ob_start();
             ErrorLogTestClass::logErrorAndThrow(
                 RuntimeException::class,
                 "Error with code",
@@ -722,7 +732,6 @@ class ErrorLogTraitTest extends TestCase {
                 42
             );
         } catch (RuntimeException $e) {
-            ob_get_clean();
             $this->assertSame(42, $e->getCode());
             return;
         }
