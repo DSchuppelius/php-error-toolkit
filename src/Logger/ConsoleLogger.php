@@ -43,10 +43,6 @@ class ConsoleLogger extends LoggerAbstract {
             $output = $logEntry;
         }
 
-        if (TerminalHelper::isTerminal() && !TerminalHelper::isNewline()) {
-            echo PHP_EOL . $output;
-        } else {
-            echo $output . PHP_EOL;
-        }
+        fwrite(STDERR, $output . "\n");
     }
 }

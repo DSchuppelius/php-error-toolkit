@@ -76,6 +76,9 @@ class TerminalHelper {
     /**
      * Gibt die aktuelle Cursor-Spalte im Terminal zurück (1-basiert).
      * Gibt 0 zurück, wenn keine gültige Position ermittelt werden kann.
+     *
+     * ACHTUNG: Diese Methode ist teuer (Shell-Aufrufe + Terminal-I/O).
+     * Nicht für häufige Aufrufe (z.B. pro Log-Zeile) verwenden.
      */
     public static function getCursorColumn(): int {
         if (!self::isTerminal()) {
@@ -96,25 +99,30 @@ class TerminalHelper {
         try {
             system('stty -icanon -echo 2>/dev/null');
 
-            $term = fopen('/dev/tty', 'w');
-            if (!$term) {
+            // /dev/tty direkt für Lesen UND Schreiben öffnen – unabhängig von STDIN,
+            // das von PHPUnit, CI-Systemen oder anderen Prozessen belegt sein kann.
+            $tty = fopen('/dev/tty', 'r+');
+            if (!$tty) {
+                system("stty '$ttyProps' 2>/dev/null");
                 return 0;
             }
-            fwrite($term, "\033[6n");
-            fclose($term);
+
+            fwrite($tty, "\033[6n");
 
             // Non-blocking Read mit Timeout (1 Sekunde) um Hänger zu vermeiden
-            $read = [STDIN];
+            $read = [$tty];
             $write = null;
             $except = null;
             $buf = '';
             if (stream_select($read, $write, $except, 1) > 0) {
-                $result = fread(STDIN, 16);
+                $result = @fread($tty, 16);
+
                 if (is_string($result)) {
                     $buf = $result;
                 }
             }
 
+            fclose($tty);
             system("stty '$ttyProps' 2>/dev/null");
 
             if ($buf !== '' && preg_match('/^\033\[(\d+);(\d+)R$/', $buf, $matches)) {
@@ -123,6 +131,9 @@ class TerminalHelper {
 
             return 0;
         } catch (Exception $e) {
+            if (isset($tty) && is_resource($tty)) {
+                fclose($tty);
+            }
             if (!empty($ttyProps)) {
                 system("stty '$ttyProps' 2>/dev/null");
             }
@@ -240,15 +251,5 @@ class TerminalHelper {
         }
 
         return 24; // Standard-Fallback
-    }
-
-    /**
-     * Prüft, ob der Cursor am Anfang einer neuen Zeile steht.
-     * Gibt true zurück wenn der Cursor in Spalte 1 steht oder die Position nicht ermittelt werden kann.
-     */
-    public static function isNewline(): bool {
-        $column = self::getCursorColumn();
-        // Wenn wir die Position nicht ermitteln können (0), nehmen wir an dass wir am Zeilenbeginn sind
-        return $column <= 1;
     }
 }

@@ -42,9 +42,4 @@ class TerminalHelperTest extends TestCase {
         $this->assertIsInt($result);
         $this->assertGreaterThan(0, $result);
     }
-
-    public function testIsNewline() {
-        $result = TerminalHelper::isNewline();
-        $this->assertIsBool($result);
-    }
 }
