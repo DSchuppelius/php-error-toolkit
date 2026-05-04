@@ -13,6 +13,7 @@ declare(strict_types=1);
 namespace Tests;
 
 use PHPUnit\Framework\TestCase;
+use ERRORToolkit\Contracts\Abstracts\LoggerAbstract;
 use ERRORToolkit\Logger\ConsoleLogger;
 use Psr\Log\LogLevel;
 
@@ -172,5 +173,18 @@ class ConsoleLoggerTest extends TestCase {
 
         $logger->setDeduplication(false);
         $this->assertFalse($logger->isDeduplicationEnabled());
+    }
+
+    public function testCanLogMessageWithHexSuffix(): void {
+        $stream = self::createStream();
+        $logger = new ConsoleLogger(LogLevel::DEBUG, enableDeduplication: false, stream: $stream);
+
+        $logger->log(LogLevel::INFO, 'ABC', [LoggerAbstract::CONTEXT_KEY_MESSAGE_HEX => true]);
+        $output = self::readStream($stream);
+
+        $this->assertStringContainsString("ABC\n", $output);
+        $this->assertStringContainsString('[str]: A  B  C', $output);
+        $this->assertStringContainsString('[hex]: 41 42 43', $output);
+        $this->assertStringNotContainsString(LoggerAbstract::CONTEXT_KEY_MESSAGE_HEX, $output);
     }
 }

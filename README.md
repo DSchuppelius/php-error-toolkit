@@ -173,6 +173,9 @@ class MyClass {
         $this->logCritical('Critical message');
         $this->logAlert('Alert message');
         $this->logEmergency('Emergency message');
+
+        // Optional: Nachricht zusätzlich als Hex-Bytes ausgeben
+        $this->logInfoHex('Payload: äöü');
         
         // All methods support context arrays
         $this->logError('Database error', ['table' => 'users', 'id' => 123]);
@@ -191,8 +194,38 @@ class MyClass {
         
         // Static methods also support context
         self::logInfo('User action', ['user' => 'admin', 'action' => 'login']);
+
+        // Auch statisch mit zusätzlicher Hex-Ausgabe
+        self::logDebugHex('RAW');
     }
 }
+```
+
+### Hex Output for String Messages
+
+For debugging encoding or binary transport issues, you can log a message with an additional hex representation:
+
+```php
+$this->logInfoHex('ABC');
+// Output contains three lines:
+// [timestamp] info [caller]: ABC
+// [timestamp] info [caller] [str]: A  B  C
+// [timestamp] info [caller] [hex]: 41 42 43
+```
+
+Jedes Zeichen steht genau über seinem Hex-Code. Für Multibyte-Zeichen (z. B. `ä` → `C3 A4`) wird die Zeichenspalte entsprechend verbreitert:
+
+```
+// [str]: ä     B
+// [hex]: C3 A4 42
+```
+
+You can also enable it on direct PSR-3 logger calls via context flag:
+
+```php
+use ERRORToolkit\Contracts\Abstracts\LoggerAbstract;
+
+$logger->info('ABC', [LoggerAbstract::CONTEXT_KEY_MESSAGE_HEX => true]);
 ```
 
 ### Conditional Logging

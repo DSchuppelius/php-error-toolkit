@@ -119,6 +119,20 @@ class ErrorLogTraitTest extends TestCase {
     }
 
     /**
+     * Test: logInfoHex() als Instanzmethode
+     */
+    public function testLogInfoHexInstance(): void {
+        $this->testInstance->logInfoHex("ABC");
+        $output = $this->getStreamOutput();
+        $this->resetStream();
+
+        $this->assertStringContainsString("ABC\n", $output);
+        $this->assertStringContainsString("[str]: A  B  C", $output);
+        $this->assertStringContainsString("[hex]: 41 42 43", $output);
+        $this->assertStringContainsString("info", strtolower($output));
+    }
+
+    /**
      * Test: logCritical() als Instanzmethode
      */
     public function testLogCriticalInstance(): void {
@@ -152,6 +166,20 @@ class ErrorLogTraitTest extends TestCase {
 
         $this->assertStringContainsString("Static error message", $output);
         $this->assertStringContainsString("error", strtolower($output));
+    }
+
+    /**
+     * Test: logInfoHex() als statische Methode
+     */
+    public function testLogInfoHexStatic(): void {
+        ErrorLogTestClass::logInfoHex("XYZ");
+        $output = $this->getStreamOutput();
+        $this->resetStream();
+
+        $this->assertStringContainsString("XYZ\n", $output);
+        $this->assertStringContainsString("[str]: X  Y  Z", $output);
+        $this->assertStringContainsString("[hex]: 58 59 5A", $output);
+        $this->assertStringContainsString("info", strtolower($output));
     }
 
     /**

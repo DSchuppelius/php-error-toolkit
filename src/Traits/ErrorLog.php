@@ -32,6 +32,14 @@ use Throwable;
  * @method void logCritical(string $message, array $context = [])
  * @method void logAlert(string $message, array $context = [])
  * @method void logEmergency(string $message, array $context = [])
+ * @method void logDebugHex(string $message, array $context = [])
+ * @method void logInfoHex(string $message, array $context = [])
+ * @method void logNoticeHex(string $message, array $context = [])
+ * @method void logWarningHex(string $message, array $context = [])
+ * @method void logErrorHex(string $message, array $context = [])
+ * @method void logCriticalHex(string $message, array $context = [])
+ * @method void logAlertHex(string $message, array $context = [])
+ * @method void logEmergencyHex(string $message, array $context = [])
  * 
  * Static logging methods (return void):
  * @method static void logDebug(string $message, array $context = [])
@@ -42,6 +50,14 @@ use Throwable;
  * @method static void logCritical(string $message, array $context = [])
  * @method static void logAlert(string $message, array $context = [])
  * @method static void logEmergency(string $message, array $context = [])
+ * @method static void logDebugHex(string $message, array $context = [])
+ * @method static void logInfoHex(string $message, array $context = [])
+ * @method static void logNoticeHex(string $message, array $context = [])
+ * @method static void logWarningHex(string $message, array $context = [])
+ * @method static void logErrorHex(string $message, array $context = [])
+ * @method static void logCriticalHex(string $message, array $context = [])
+ * @method static void logAlertHex(string $message, array $context = [])
+ * @method static void logEmergencyHex(string $message, array $context = [])
  * 
  * Log and throw methods (log message and throw exception, never returns):
  * @method static never logErrorAndThrow(string $exceptionClass, string $message, array $context = [], ?Throwable $previous = null, int $code = 0)
@@ -351,6 +367,13 @@ trait ErrorLog {
 
         $suffix = substr($name, 3); // Entferne 'log' Präfix
 
+        // Hex-Ausgabe: log{Level}Hex
+        if (str_ends_with($suffix, 'Hex')) {
+            $levelName = substr($suffix, 0, -3);
+            $level = self::$logLevelMap[$levelName] ?? null;
+            return $level !== null ? ['level' => $level, 'type' => 'hex'] : null;
+        }
+
         // Prüfe bekannte Suffixe
         foreach (self::$methodSuffixMap as $methodSuffix => $config) {
             if (str_ends_with($suffix, $methodSuffix)) {
@@ -400,8 +423,26 @@ trait ErrorLog {
             'unless' => self::handleConditionalLog(false, $level, $arguments),
             'andReturn' => self::handleLogAndReturn($level, $arguments),
             'withTimer' => self::handleLogWithTimer($level, $arguments),
+            'hex' => self::handleHexLog($level, $arguments),
             default => self::handleStandardLog($level, $arguments),
         };
+    }
+
+    /**
+     * Verarbeitet log{Level}Hex() Aufrufe.
+     */
+    private static function handleHexLog(string $level, array $arguments): null {
+        $message = (string)($arguments[0] ?? '');
+        $context = $arguments[1] ?? [];
+
+        if (!is_array($context)) {
+            $context = [];
+        }
+
+        $context[LoggerAbstract::CONTEXT_KEY_MESSAGE_HEX] = true;
+        self::logInternal($level, $message, $context);
+
+        return null;
     }
 
     /**

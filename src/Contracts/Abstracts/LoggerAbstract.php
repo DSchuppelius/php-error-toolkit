@@ -18,6 +18,8 @@ use InvalidArgumentException;
 use Stringable;
 
 abstract class LoggerAbstract implements LoggerInterface {
+    public const CONTEXT_KEY_MESSAGE_HEX = '_hexMessage';
+
     protected int $logLevel;
 
     /**
@@ -289,11 +291,93 @@ abstract class LoggerAbstract implements LoggerInterface {
     }
 
     protected function generateLogEntry(string $level, string|Stringable $message, array $context = []): string {
+        [$context, $includeMessageHex] = $this->extractInternalContextFlags($context);
+
         $timestamp = date('Y-m-d H:i:s');
         $caller = self::getCallerFunction($this->logLevel === 7);
+        $messageString = (string)$message;
         $contextString = empty($context) ? '' : ' ' . json_encode($context);
-        return "[{$timestamp}] {$level} [{$caller}]: {$message}{$contextString}";
+
+        if (!$includeMessageHex) {
+            return "[{$timestamp}] {$level} [{$caller}]: {$messageString}{$contextString}";
+        }
+
+        $prefix = "[{$timestamp}] {$level} [{$caller}]";
+        $messageLine = "{$prefix}: {$messageString}{$contextString}";
+        [$charLine, $alignedHexLine] = self::toAlignedHexLines($messageString);
+
+        return $messageLine . "\n"
+            . "{$prefix} [str]: {$charLine}" . "\n"
+            . "{$prefix} [hex]: {$alignedHexLine}";
     }
+
+    /**
+     * Trennt interne Context-Flags vom auszugebenden Kontext.
+     *
+     * @return array{0: array, 1: bool}
+     */
+    protected function extractInternalContextFlags(array $context): array {
+        $includeMessageHex = (bool)($context[self::CONTEXT_KEY_MESSAGE_HEX] ?? false);
+        unset($context[self::CONTEXT_KEY_MESSAGE_HEX]);
+
+        return [$context, $includeMessageHex];
+    }
+
+    /**
+     * Konvertiert einen String in eine lesbare Byte-Hexdarstellung.
+     */
+    protected static function toHexString(string $value): string {
+        if ($value == '') {
+            return '';
+        }
+
+        $hex = strtoupper(bin2hex($value));
+        return trim(chunk_split($hex, 2, ' '));
+    }
+
+    /**
+     * Erzeugt zwei ausgerichtete Zeilen:
+     * - Zeile 1: Zeichen mit Leerzeichen aufgefüllt (colWidth = hexWidth)
+     * - Zeile 2: Hex-Bytes, spaltengenau darunter
+     *
+     * Jedes Unicode-Zeichen bekommt eine Spalte so breit wie seine Hex-Darstellung,
+     * damit Zeichen und Code exakt übereinander stehen.
+     *
+     * @return array{0: string, 1: string}
+     */
+    protected static function toAlignedHexLines(string $value): array {
+        if ($value === '') {
+            return ['', ''];
+        }
+
+        $chars = preg_split('//u', $value, -1, PREG_SPLIT_NO_EMPTY);
+        if ($chars === false || count($chars) === 0) {
+            return [$value, ''];
+        }
+
+        $charCells = [];
+        $hexCells  = [];
+
+        foreach ($chars as $char) {
+            $hexBytes     = strtoupper(bin2hex($char));
+            $hexFormatted = trim(chunk_split($hexBytes, 2, ' ')); // z.B. "41" oder "C3 A4"
+
+            $hexWidth          = strlen($hexFormatted);           // immer ASCII
+            $charDisplayWidth  = mb_strlen($char, 'UTF-8');       // visuelle Breite (1 für normale Zeichen)
+            $colWidth          = max($charDisplayWidth, $hexWidth);
+
+            // Zeichen visuell auffüllen (multi-byte-sicher: Leerzeichen manuell anhängen)
+            $charCells[] = $char . str_repeat(' ', $colWidth - $charDisplayWidth);
+            // Hex auffüllen (alles ASCII, str_pad reicht)
+            $hexCells[]  = str_pad($hexFormatted, $colWidth);
+        }
+
+        return [
+            implode(' ', $charCells),
+            implode(' ', $hexCells),
+        ];
+    }
+
 
     abstract protected function writeLog(string $logEntry, string $level): void;
 
