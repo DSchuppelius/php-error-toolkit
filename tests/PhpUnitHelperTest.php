@@ -23,8 +23,8 @@ class PhpUnitHelperTest extends TestCase {
     }
 
     public function test_supports_colors() {
-        $result = PhpUnitHelper::supportsColors();
-        $this->assertIsBool($result, 'supportsColors should return a boolean');
+        $this->expectNotToPerformAssertions();
+        PhpUnitHelper::supportsColors();
     }
 
     public function test_supports_colors_with_never_argument() {

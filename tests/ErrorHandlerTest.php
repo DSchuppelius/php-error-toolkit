@@ -208,7 +208,6 @@ class ErrorHandlerTest extends TestCase {
         $handler->handleException($exception);
 
         $this->assertNotNull($capturedContext);
-        assert(is_array($capturedContext));
         $this->assertSame('InvalidArgumentException', $capturedContext['exception']);
         $this->assertSame('Bad arg', $capturedContext['message']);
         $this->assertSame(99, $capturedContext['code']);
@@ -243,12 +242,13 @@ class ErrorHandlerTest extends TestCase {
     }
 
     public function test_falls_back_to_error_log_when_no_logger(): void {
+        $this->expectNotToPerformAssertions();
+
         LoggerRegistry::resetLogger();
         $handler = ErrorHandler::createUnregistered();
 
         // error_log() Fallback → kein Crash erwartet
         $handler->handleError(E_NOTICE, 'No logger available', __FILE__, __LINE__);
-        $this->assertTrue(true);
     }
 
     // ─── Integration: register/unregister (separater Prozess) ─────
@@ -430,13 +430,14 @@ class ErrorHandlerTest extends TestCase {
     // ─── exitOnException ──────────────────────────────────────────
 
     public function test_exit_on_exception_default_false_for_unregistered(): void {
+        $this->expectNotToPerformAssertions();
+
         // createUnregistered hat exitOnException=false als Default
         $handler = ErrorHandler::createUnregistered(new NullLogger);
         $exception = new \RuntimeException('No exit');
 
-        // Sollte NICHT exit() aufrufen → einfach zurückkehren
+        // Sollte NICHT exit() aufrufen → einfach zurückkehren (kein Exit = Erfolg)
         $handler->handleException($exception);
-        $this->assertTrue(true); // Kein Exit = Erfolg
     }
 
     // ─── Hilfsmethoden ────────────────────────────────────────────

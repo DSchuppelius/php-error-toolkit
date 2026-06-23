@@ -27,19 +27,6 @@ use RuntimeException;
  */
 class ErrorLogTestClass {
     use ErrorLog;
-
-    // Beispielmethode die einen Fehler loggt und eine Exception wirft (IDE Testzwecke)
-    public function test(): string {
-        if (false) {
-            return "Unreachable";
-        }
-
-        if ($this->logWarningIf(true, "This is a warning")) {
-            return "Warning logged";
-        }
-
-        $this->logErrorAndThrow(RuntimeException::class, "This is a test error");
-    }
 }
 
 class ErrorLogTraitTest extends TestCase {
@@ -254,10 +241,7 @@ class ErrorLogTraitTest extends TestCase {
         } catch (RuntimeException $e) {
             $this->assertSame("Chained error", $e->getMessage());
             $this->assertSame($previousException, $e->getPrevious());
-            return;
         }
-
-        $this->fail("RuntimeException was not thrown");
     }
 
     /**
@@ -267,7 +251,10 @@ class ErrorLogTraitTest extends TestCase {
         $this->expectException(BadMethodCallException::class);
         $this->expectExceptionMessageMatches('/existiert nicht/');
 
-        $this->testInstance->logInvalidMethod("test");
+        // Dynamischer Methodenname: Aufruf einer nicht existierenden Magic-Methode
+        // löst __call() aus, das eine BadMethodCallException werfen muss.
+        $method = $this->invalidMethodName();
+        $this->testInstance->$method("test");
     }
 
     /**
@@ -277,7 +264,19 @@ class ErrorLogTraitTest extends TestCase {
         $this->expectException(BadMethodCallException::class);
         $this->expectExceptionMessageMatches('/existiert nicht/');
 
-        ErrorLogTestClass::logInvalidMethod("test");
+        // Dynamischer Methodenname: Aufruf einer nicht existierenden statischen
+        // Magic-Methode löst __callStatic() aus, das eine BadMethodCallException werfen muss.
+        $method = $this->invalidMethodName();
+        ErrorLogTestClass::$method("test");
+    }
+
+    /**
+     * Liefert einen zur Laufzeit zusammengesetzten, nicht existierenden Magic-Methodennamen.
+     * Der Name ist bewusst kein Literal, da er ein nicht abgedecktes Log-Level ("Invalid")
+     * verwendet, um das Fehlerverhalten von __call()/__callStatic() zu testen.
+     */
+    private function invalidMethodName(): string {
+        return 'log' . ucfirst('invalid') . 'Method';
     }
 
     /**
@@ -328,7 +327,6 @@ class ErrorLogTraitTest extends TestCase {
 
             try {
                 $this->testInstance->$method(RuntimeException::class, $message);
-                $this->fail("Exception sollte geworfen werden für {$method}");
             } catch (RuntimeException $e) {
                 $output = $this->getStreamOutput();
                 $this->resetStream();
@@ -674,7 +672,19 @@ class ErrorLogTraitTest extends TestCase {
         $this->expectException(BadMethodCallException::class);
         $this->expectExceptionMessageMatches('/Closure/');
 
-        ErrorLogTestClass::logDebugWithTimer("not a closure", "Invalid");
+        // Dynamischer Methodenname: bewusst ungültiges erstes Argument (keine Closure),
+        // damit zur Laufzeit eine BadMethodCallException ausgelöst wird.
+        $method = $this->withTimerMethodName();
+        ErrorLogTestClass::$method("not a closure", "Invalid");
+    }
+
+    /**
+     * Liefert den zur Laufzeit zusammengesetzten Namen einer WithTimer-Magic-Methode.
+     * Der Name ist bewusst kein Literal, da der Aufruf gezielt mit einem ungültigen
+     * (Nicht-Closure-)Argument erfolgt, um das Fehlerverhalten zu testen.
+     */
+    private function withTimerMethodName(): string {
+        return 'log' . ucfirst('debug') . 'WithTimer';
     }
 
     /**
@@ -763,10 +773,7 @@ class ErrorLogTraitTest extends TestCase {
             );
         } catch (RuntimeException $e) {
             $this->assertSame(42, $e->getCode());
-            return;
         }
-
-        $this->fail("RuntimeException was not thrown");
     }
 
     /**

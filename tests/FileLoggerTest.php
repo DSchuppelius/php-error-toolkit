@@ -67,13 +67,11 @@ class FileLoggerTest extends TestCase {
         $nonWritableDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'no_write_' . uniqid();
         if (!mkdir($nonWritableDir) && !is_dir($nonWritableDir)) {
             $this->markTestSkipped("Konnte kein temporäres Verzeichnis erstellen, Test wird übersprungen.");
-            return;
         }
 
         if (!chmod($nonWritableDir, 0500)) {
             rmdir($nonWritableDir);
             $this->markTestSkipped("Konnte die Zugriffsrechte für das Verzeichnis nicht ändern, Test wird übersprungen.");
-            return;
         }
 
         // Zusätzlicher Test: Überprüfen, ob eine Datei erstellt werden kann
@@ -86,7 +84,6 @@ class FileLoggerTest extends TestCase {
             }
             rmdir($nonWritableDir);
             $this->markTestSkipped("Das Verzeichnis konnte nicht als nicht beschreibbar getestet werden.");
-            return;
         }
         $nonWritableLogFile = $nonWritableDir . DIRECTORY_SEPARATOR . 'no_permission.log';
 

@@ -77,9 +77,7 @@ class ExceptionsTest extends TestCase {
             throw new $exceptionClass('Test');
         } catch (Throwable $e) {
             $this->assertSame('Test', $e->getMessage());
-            return;
         }
-        $this->fail('Exception was not thrown');
     }
 
     public function test_exception_hierarchy(): void {

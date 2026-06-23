@@ -16,20 +16,20 @@ use ERRORToolkit\Helper\OsHelper;
 use PHPUnit\Framework\TestCase;
 
 class OsHelperTest extends TestCase {
-    public function test_is_windows_returns_bool(): void {
-        $this->assertIsBool(OsHelper::isWindows());
+    public function test_is_windows_matches_php_os(): void {
+        $this->assertSame(stripos(PHP_OS, 'WIN') === 0, OsHelper::isWindows());
     }
 
-    public function test_is_linux_returns_bool(): void {
-        $this->assertIsBool(OsHelper::isLinux());
+    public function test_is_linux_matches_php_os(): void {
+        $this->assertSame(stripos(PHP_OS, 'LINUX') === 0, OsHelper::isLinux());
     }
 
-    public function test_is_mac_os_returns_bool(): void {
-        $this->assertIsBool(OsHelper::isMacOS());
+    public function test_is_mac_os_matches_php_os(): void {
+        $this->assertSame(stripos(PHP_OS, 'DAR') === 0, OsHelper::isMacOS());
     }
 
-    public function test_is_unix_returns_bool(): void {
-        $this->assertIsBool(OsHelper::isUnix());
+    public function test_is_unix_matches_linux_or_mac(): void {
+        $this->assertSame(OsHelper::isLinux() || OsHelper::isMacOS(), OsHelper::isUnix());
     }
 
     public function test_get_os_name_returns_non_empty(): void {
@@ -48,9 +48,13 @@ class OsHelperTest extends TestCase {
         $this->assertContains($sep, [':', ';']);
     }
 
-    public function test_get_home_directory_returns_string(): void {
-        $home = OsHelper::getHomeDirectory();
-        $this->assertIsString($home);
+    public function test_get_home_directory_matches_environment(): void {
+        if (OsHelper::isWindows()) {
+            $expected = $_SERVER['USERPROFILE'] ?? (($_SERVER['HOMEDRIVE'] ?? '') . ($_SERVER['HOMEPATH'] ?? '')) ?: '';
+        } else {
+            $expected = $_SERVER['HOME'] ?? '';
+        }
+        $this->assertSame($expected, OsHelper::getHomeDirectory());
     }
 
     public function test_get_temp_directory(): void {
@@ -117,13 +121,17 @@ class OsHelperTest extends TestCase {
         $this->assertArrayHasKey('hostname', $info);
     }
 
-    public function test_get_current_username_returns_string(): void {
-        $username = OsHelper::getCurrentUsername();
-        $this->assertIsString($username);
+    public function test_get_current_username_is_deterministic(): void {
+        $this->assertSame(OsHelper::getCurrentUsername(), OsHelper::getCurrentUsername());
     }
 
-    public function test_is_privileged_user_returns_bool(): void {
-        $this->assertIsBool(OsHelper::isPrivilegedUser());
+    public function test_is_privileged_user_matches_posix_uid(): void {
+        if (!OsHelper::isWindows() && function_exists('posix_getuid')) {
+            $this->assertSame(posix_getuid() === 0, OsHelper::isPrivilegedUser());
+        } else {
+            // Auf Systemen ohne posix-uid-Prüfung nur Determinismus sicherstellen.
+            $this->assertSame(OsHelper::isPrivilegedUser(), OsHelper::isPrivilegedUser());
+        }
     }
 
     public function test_os_detection_consistency(): void {
