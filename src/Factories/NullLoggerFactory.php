@@ -13,15 +13,14 @@ declare(strict_types=1);
 namespace ERRORToolkit\Factories;
 
 use ERRORToolkit\Contracts\Interfaces\LoggerFactoryInterface;
-use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
+use Psr\Log\{LoggerInterface, NullLogger};
 
 class NullLoggerFactory implements LoggerFactoryInterface {
     protected static ?LoggerInterface $logger = null;
 
     public static function getLogger(): LoggerInterface {
         if (self::$logger === null) {
-            self::$logger = new NullLogger();
+            self::$logger = new NullLogger;
         }
         return self::$logger;
     }

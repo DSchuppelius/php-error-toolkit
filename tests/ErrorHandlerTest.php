@@ -13,13 +13,10 @@ declare(strict_types=1);
 namespace Tests;
 
 use ErrorException;
-use ERRORToolkit\ErrorHandler;
-use ERRORToolkit\LoggerRegistry;
+use ERRORToolkit\{ErrorHandler, LoggerRegistry};
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
-use Psr\Log\LoggerInterface;
-use Psr\Log\LogLevel;
-use Psr\Log\NullLogger;
+use Psr\Log\{LogLevel, LoggerInterface, NullLogger};
 
 class ErrorHandlerTest extends TestCase {
     private int $originalErrorReporting;
@@ -38,50 +35,50 @@ class ErrorHandlerTest extends TestCase {
 
     // ─── createUnregistered ───────────────────────────────────────
 
-    public function testCreateUnregisteredReturnsInstance(): void {
-        $handler = ErrorHandler::createUnregistered(new NullLogger());
+    public function test_create_unregistered_returns_instance(): void {
+        $handler = ErrorHandler::createUnregistered(new NullLogger);
         $this->assertInstanceOf(ErrorHandler::class, $handler);
         $this->assertFalse($handler->isRegistered());
     }
 
     // ─── handleError: Logging ─────────────────────────────────────
 
-    public function testWarningIsLoggedAsWarning(): void {
+    public function test_warning_is_logged_as_warning(): void {
         $logger = $this->createMockLogger(LogLevel::WARNING, '[E_WARNING]');
         $handler = ErrorHandler::createUnregistered($logger);
 
         $handler->handleError(E_WARNING, 'Test warning', __FILE__, __LINE__);
     }
 
-    public function testNoticeIsLoggedAsNotice(): void {
+    public function test_notice_is_logged_as_notice(): void {
         $logger = $this->createMockLogger(LogLevel::NOTICE, '[E_NOTICE]');
         $handler = ErrorHandler::createUnregistered($logger);
 
         $handler->handleError(E_NOTICE, 'Test notice', __FILE__, __LINE__);
     }
 
-    public function testDeprecatedIsLoggedAsNotice(): void {
+    public function test_deprecated_is_logged_as_notice(): void {
         $logger = $this->createMockLogger(LogLevel::NOTICE, '[E_DEPRECATED]');
         $handler = ErrorHandler::createUnregistered($logger);
 
         $handler->handleError(E_DEPRECATED, 'Deprecated feature', __FILE__, __LINE__);
     }
 
-    public function testUserWarningIsLoggedAsWarning(): void {
+    public function test_user_warning_is_logged_as_warning(): void {
         $logger = $this->createMockLogger(LogLevel::WARNING, '[E_USER_WARNING]');
         $handler = ErrorHandler::createUnregistered($logger);
 
         $handler->handleError(E_USER_WARNING, 'User warning', __FILE__, __LINE__);
     }
 
-    public function testUserNoticeIsLoggedAsNotice(): void {
+    public function test_user_notice_is_logged_as_notice(): void {
         $logger = $this->createMockLogger(LogLevel::NOTICE, '[E_USER_NOTICE]');
         $handler = ErrorHandler::createUnregistered($logger);
 
         $handler->handleError(E_USER_NOTICE, 'User notice', __FILE__, __LINE__);
     }
 
-    public function testUserDeprecatedIsLoggedAsNotice(): void {
+    public function test_user_deprecated_is_logged_as_notice(): void {
         $logger = $this->createMockLogger(LogLevel::NOTICE, '[E_USER_DEPRECATED]');
         $handler = ErrorHandler::createUnregistered($logger);
 
@@ -90,7 +87,7 @@ class ErrorHandlerTest extends TestCase {
 
     // ─── handleError: error_reporting() Respekt ───────────────────
 
-    public function testSuppressedErrorIsNotLogged(): void {
+    public function test_suppressed_error_is_not_logged(): void {
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects($this->never())->method('log');
 
@@ -106,16 +103,16 @@ class ErrorHandlerTest extends TestCase {
         }
     }
 
-    public function testHandleErrorReturnsTrueWhenHandled(): void {
-        $handler = ErrorHandler::createUnregistered(new NullLogger());
+    public function test_handle_error_returns_true_when_handled(): void {
+        $handler = ErrorHandler::createUnregistered(new NullLogger);
         $result = $handler->handleError(E_WARNING, 'Handled', __FILE__, __LINE__);
         $this->assertTrue($result);
     }
 
     // ─── handleError: throwOnWarning ──────────────────────────────
 
-    public function testThrowOnWarningThrowsErrorException(): void {
-        $handler = ErrorHandler::createUnregistered(new NullLogger(), throwOnWarning: true);
+    public function test_throw_on_warning_throws_error_exception(): void {
+        $handler = ErrorHandler::createUnregistered(new NullLogger, throwOnWarning: true);
 
         $this->expectException(ErrorException::class);
         $this->expectExceptionMessage('Severe warning');
@@ -123,15 +120,15 @@ class ErrorHandlerTest extends TestCase {
         $handler->handleError(E_WARNING, 'Severe warning', __FILE__, __LINE__);
     }
 
-    public function testThrowOnWarningDoesNotThrowForNotice(): void {
-        $handler = ErrorHandler::createUnregistered(new NullLogger(), throwOnWarning: true);
+    public function test_throw_on_warning_does_not_throw_for_notice(): void {
+        $handler = ErrorHandler::createUnregistered(new NullLogger, throwOnWarning: true);
 
         $result = $handler->handleError(E_NOTICE, 'Just a notice', __FILE__, __LINE__);
         $this->assertTrue($result);
     }
 
-    public function testThrowOnWarningDoesNotThrowForDeprecated(): void {
-        $handler = ErrorHandler::createUnregistered(new NullLogger(), throwOnWarning: true);
+    public function test_throw_on_warning_does_not_throw_for_deprecated(): void {
+        $handler = ErrorHandler::createUnregistered(new NullLogger, throwOnWarning: true);
 
         $result = $handler->handleError(E_DEPRECATED, 'Deprecated', __FILE__, __LINE__);
         $this->assertTrue($result);
@@ -139,8 +136,8 @@ class ErrorHandlerTest extends TestCase {
 
     // ─── handleError: Immer-werfen bei E_USER_ERROR / E_RECOVERABLE_ERROR ─
 
-    public function testUserErrorAlwaysThrows(): void {
-        $handler = ErrorHandler::createUnregistered(new NullLogger());
+    public function test_user_error_always_throws(): void {
+        $handler = ErrorHandler::createUnregistered(new NullLogger);
 
         $this->expectException(ErrorException::class);
         $this->expectExceptionMessage('Fatal user error');
@@ -148,8 +145,8 @@ class ErrorHandlerTest extends TestCase {
         $handler->handleError(E_USER_ERROR, 'Fatal user error', __FILE__, __LINE__);
     }
 
-    public function testRecoverableErrorAlwaysThrows(): void {
-        $handler = ErrorHandler::createUnregistered(new NullLogger());
+    public function test_recoverable_error_always_throws(): void {
+        $handler = ErrorHandler::createUnregistered(new NullLogger);
 
         $this->expectException(ErrorException::class);
         $this->expectExceptionMessage('Recoverable error');
@@ -159,7 +156,7 @@ class ErrorHandlerTest extends TestCase {
 
     // ─── handleError: Context enthält Details ─────────────────────
 
-    public function testErrorContextContainsFileAndLine(): void {
+    public function test_error_context_contains_file_and_line(): void {
         $capturedContext = null;
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects($this->once())
@@ -184,7 +181,7 @@ class ErrorHandlerTest extends TestCase {
 
     // ─── handleException ──────────────────────────────────────────
 
-    public function testHandleExceptionLogsCritical(): void {
+    public function test_handle_exception_logs_critical(): void {
         $logger = $this->createMockLogger(LogLevel::CRITICAL, 'Nicht-gefangene Exception');
         $handler = ErrorHandler::createUnregistered($logger);
 
@@ -192,7 +189,7 @@ class ErrorHandlerTest extends TestCase {
         $handler->handleException($exception);
     }
 
-    public function testHandleExceptionContextContainsDetails(): void {
+    public function test_handle_exception_context_contains_details(): void {
         $capturedContext = null;
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects($this->once())
@@ -220,7 +217,7 @@ class ErrorHandlerTest extends TestCase {
 
     // ─── handleShutdown ───────────────────────────────────────────
 
-    public function testHandleShutdownWithNoErrorDoesNothing(): void {
+    public function test_handle_shutdown_with_no_error_does_nothing(): void {
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects($this->never())->method('log');
 
@@ -235,7 +232,7 @@ class ErrorHandlerTest extends TestCase {
 
     // ─── Logger Fallback ──────────────────────────────────────────
 
-    public function testFallsBackToLoggerRegistry(): void {
+    public function test_falls_back_to_logger_registry(): void {
         $logger = $this->createMockLogger(LogLevel::WARNING, '[E_WARNING]');
         LoggerRegistry::setLogger($logger);
 
@@ -245,7 +242,7 @@ class ErrorHandlerTest extends TestCase {
         $handler->handleError(E_WARNING, 'Registry fallback', __FILE__, __LINE__);
     }
 
-    public function testFallsBackToErrorLogWhenNoLogger(): void {
+    public function test_falls_back_to_error_log_when_no_logger(): void {
         LoggerRegistry::resetLogger();
         $handler = ErrorHandler::createUnregistered();
 
@@ -257,8 +254,8 @@ class ErrorHandlerTest extends TestCase {
     // ─── Integration: register/unregister (separater Prozess) ─────
 
     #[RunInSeparateProcess]
-    public function testRegisterAndUnregisterLifecycle(): void {
-        $handler = ErrorHandler::register(new NullLogger());
+    public function test_register_and_unregister_lifecycle(): void {
+        $handler = ErrorHandler::register(new NullLogger);
         $this->assertTrue($handler->isRegistered());
 
         $handler->unregister();
@@ -266,15 +263,15 @@ class ErrorHandlerTest extends TestCase {
     }
 
     #[RunInSeparateProcess]
-    public function testUnregisterTwiceIsHarmless(): void {
-        $handler = ErrorHandler::register(new NullLogger());
+    public function test_unregister_twice_is_harmless(): void {
+        $handler = ErrorHandler::register(new NullLogger);
         $handler->unregister();
         $handler->unregister();
         $this->assertFalse($handler->isRegistered());
     }
 
     #[RunInSeparateProcess]
-    public function testTriggerUserWarningIsCaptured(): void {
+    public function test_trigger_user_warning_is_captured(): void {
         $captured = false;
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects($this->atLeastOnce())
@@ -292,7 +289,7 @@ class ErrorHandlerTest extends TestCase {
     }
 
     #[RunInSeparateProcess]
-    public function testTriggerUserNoticeIsCaptured(): void {
+    public function test_trigger_user_notice_is_captured(): void {
         $captured = false;
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects($this->atLeastOnce())
@@ -312,30 +309,30 @@ class ErrorHandlerTest extends TestCase {
     // ─── Mehrfach-Registrierung ─────────────────────────────────
 
     #[RunInSeparateProcess]
-    public function testDoubleRegisterThrowsLogicException(): void {
-        $handler = ErrorHandler::register(new NullLogger());
+    public function test_double_register_throws_logic_exception(): void {
+        $handler = ErrorHandler::register(new NullLogger);
 
         $this->expectException(\LogicException::class);
         $this->expectExceptionMessage('bereits registriert');
 
-        ErrorHandler::register(new NullLogger());
+        ErrorHandler::register(new NullLogger);
     }
 
     #[RunInSeparateProcess]
-    public function testCanReRegisterAfterUnregister(): void {
-        $handler = ErrorHandler::register(new NullLogger());
+    public function test_can_re_register_after_unregister(): void {
+        $handler = ErrorHandler::register(new NullLogger);
         $handler->unregister();
 
-        $handler2 = ErrorHandler::register(new NullLogger());
+        $handler2 = ErrorHandler::register(new NullLogger);
         $this->assertTrue($handler2->isRegistered());
         $handler2->unregister();
     }
 
     #[RunInSeparateProcess]
-    public function testGetActiveInstanceReturnsRegisteredHandler(): void {
+    public function test_get_active_instance_returns_registered_handler(): void {
         $this->assertNull(ErrorHandler::getActiveInstance());
 
-        $handler = ErrorHandler::register(new NullLogger());
+        $handler = ErrorHandler::register(new NullLogger);
         $this->assertSame($handler, ErrorHandler::getActiveInstance());
 
         $handler->unregister();
@@ -344,12 +341,12 @@ class ErrorHandlerTest extends TestCase {
 
     // ─── Listener/Callback-System ─────────────────────────────────
 
-    public function testListenerIsCalledOnMatchingLevel(): void {
+    public function test_listener_is_called_on_matching_level(): void {
         $called = false;
         $capturedMessage = '';
         $capturedContext = [];
 
-        $handler = ErrorHandler::createUnregistered(new NullLogger());
+        $handler = ErrorHandler::createUnregistered(new NullLogger);
         $handler->addListener(LogLevel::WARNING, function (string $message, array $context) use (&$called, &$capturedMessage, &$capturedContext) {
             $called = true;
             $capturedMessage = $message;
@@ -363,10 +360,10 @@ class ErrorHandlerTest extends TestCase {
         $this->assertSame('E_WARNING', $capturedContext['severity_name']);
     }
 
-    public function testListenerIsNotCalledOnDifferentLevel(): void {
+    public function test_listener_is_not_called_on_different_level(): void {
         $called = false;
 
-        $handler = ErrorHandler::createUnregistered(new NullLogger());
+        $handler = ErrorHandler::createUnregistered(new NullLogger);
         $handler->addListener(LogLevel::CRITICAL, function () use (&$called) {
             $called = true;
         });
@@ -377,10 +374,10 @@ class ErrorHandlerTest extends TestCase {
         $this->assertFalse($called, 'Listener sollte nicht aufgerufen werden');
     }
 
-    public function testMultipleListenersOnSameLevel(): void {
+    public function test_multiple_listeners_on_same_level(): void {
         $count = 0;
 
-        $handler = ErrorHandler::createUnregistered(new NullLogger());
+        $handler = ErrorHandler::createUnregistered(new NullLogger);
         $handler->addListener(LogLevel::WARNING, function () use (&$count) {
             $count++;
         });
@@ -393,10 +390,10 @@ class ErrorHandlerTest extends TestCase {
         $this->assertSame(2, $count);
     }
 
-    public function testListenerExceptionDoesNotCrashHandler(): void {
+    public function test_listener_exception_does_not_crash_handler(): void {
         $secondCalled = false;
 
-        $handler = ErrorHandler::createUnregistered(new NullLogger());
+        $handler = ErrorHandler::createUnregistered(new NullLogger);
         $handler->addListener(LogLevel::WARNING, function () {
             throw new \RuntimeException('Listener kaputt');
         });
@@ -411,10 +408,10 @@ class ErrorHandlerTest extends TestCase {
         $this->assertTrue($secondCalled, 'Zweiter Listener muss trotzdem aufgerufen werden');
     }
 
-    public function testListenerOnExceptionLevel(): void {
+    public function test_listener_on_exception_level(): void {
         $called = false;
 
-        $handler = ErrorHandler::createUnregistered(new NullLogger());
+        $handler = ErrorHandler::createUnregistered(new NullLogger);
         $handler->addListener(LogLevel::CRITICAL, function () use (&$called) {
             $called = true;
         });
@@ -424,18 +421,17 @@ class ErrorHandlerTest extends TestCase {
         $this->assertTrue($called, 'CRITICAL-Listener sollte bei Exception aufgerufen werden');
     }
 
-    public function testAddListenerReturnsSelfForChaining(): void {
-        $handler = ErrorHandler::createUnregistered(new NullLogger());
-        $result = $handler->addListener(LogLevel::WARNING, function () {
-        });
+    public function test_add_listener_returns_self_for_chaining(): void {
+        $handler = ErrorHandler::createUnregistered(new NullLogger);
+        $result = $handler->addListener(LogLevel::WARNING, function () {});
         $this->assertSame($handler, $result);
     }
 
     // ─── exitOnException ──────────────────────────────────────────
 
-    public function testExitOnExceptionDefaultFalseForUnregistered(): void {
+    public function test_exit_on_exception_default_false_for_unregistered(): void {
         // createUnregistered hat exitOnException=false als Default
-        $handler = ErrorHandler::createUnregistered(new NullLogger());
+        $handler = ErrorHandler::createUnregistered(new NullLogger);
         $exception = new \RuntimeException('No exit');
 
         // Sollte NICHT exit() aufrufen → einfach zurückkehren
@@ -452,7 +448,7 @@ class ErrorHandlerTest extends TestCase {
             ->with(
                 $expectedLevel,
                 $this->stringContains($messageContains),
-                $this->callback(fn(mixed $value): bool => is_array($value))
+                $this->callback(fn (mixed $value): bool => is_array($value))
             );
         return $logger;
     }

@@ -56,11 +56,11 @@ class PhpUnitHelper {
                 return TerminalHelper::isDebugConsole() || TerminalHelper::isTerminal();
             }
             // colors="true" in XML entspricht --colors=auto
-            if ($xmlColors === 'true' || $xmlColors === true) {
+            if ($xmlColors === 'true') {
                 return TerminalHelper::isDebugConsole() || TerminalHelper::isTerminal();
             }
             // colors="false" in XML entspricht --colors=never
-            if ($xmlColors === 'false' || $xmlColors === false) {
+            if ($xmlColors === 'false') {
                 return false;
             }
         }
@@ -77,7 +77,7 @@ class PhpUnitHelper {
         $configFiles = [
             'phpunit.xml',
             'phpunit.xml.dist',
-            'phpunit.dist.xml'
+            'phpunit.dist.xml',
         ];
 
         foreach ($configFiles as $configFile) {
@@ -86,7 +86,7 @@ class PhpUnitHelper {
                 $xml = simplexml_load_file($configFile, options: LIBXML_NONET);
                 libxml_use_internal_errors($previousUseErrors);
                 if ($xml !== false && isset($xml['colors'])) {
-                    return (string)$xml['colors'];
+                    return (string) $xml['colors'];
                 }
             }
         }

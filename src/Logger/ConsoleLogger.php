@@ -17,16 +17,15 @@ use ERRORToolkit\Helper\TerminalHelper;
 use Psr\Log\LogLevel;
 
 class ConsoleLogger extends LoggerAbstract {
-
     private const LEVEL_COLORS = [
         'emergency' => "\033[1;31m", // Rot
-        'alert'     => "\033[1;31m", // Rot
-        'critical'  => "\033[1;35m", // Magenta
-        'error'     => "\033[1;31m", // Rot
-        'warning'   => "\033[1;33m", // Gelb
-        'notice'    => "\033[1;34m", // Blau
-        'info'      => "\033[0;32m", // Grün
-        'debug'     => "\033[0;36m", // Cyan
+        'alert' => "\033[1;31m", // Rot
+        'critical' => "\033[1;35m", // Magenta
+        'error' => "\033[1;31m", // Rot
+        'warning' => "\033[1;33m", // Gelb
+        'notice' => "\033[1;34m", // Blau
+        'info' => "\033[0;32m", // Grün
+        'debug' => "\033[0;36m", // Cyan
     ];
 
     private const RESET_COLOR = "\033[0m"; // Zurücksetzen auf Standard

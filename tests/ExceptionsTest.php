@@ -12,15 +12,10 @@ declare(strict_types=1);
 
 namespace Tests;
 
+use ERRORToolkit\Exceptions\FileSystem\{FileExistsException, FileInvalidException, FileNotFoundException, FileNotWrittenException, FolderNotFoundException};
+use ERRORToolkit\Exceptions\{FileSystemException, InvalidPasswordException};
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use ERRORToolkit\Exceptions\FileSystemException;
-use ERRORToolkit\Exceptions\InvalidPasswordException;
-use ERRORToolkit\Exceptions\FileSystem\FileNotFoundException;
-use ERRORToolkit\Exceptions\FileSystem\FileNotWrittenException;
-use ERRORToolkit\Exceptions\FileSystem\FileExistsException;
-use ERRORToolkit\Exceptions\FileSystem\FileInvalidException;
-use ERRORToolkit\Exceptions\FileSystem\FolderNotFoundException;
 use RuntimeException;
 use Throwable;
 
@@ -41,8 +36,8 @@ class ExceptionsTest extends TestCase {
     }
 
     #[DataProvider('exceptionClassProvider')]
-    public function testExceptionCanBeCreatedWithDefaults(string $exceptionClass): void {
-        $exception = new $exceptionClass();
+    public function test_exception_can_be_created_with_defaults(string $exceptionClass): void {
+        $exception = new $exceptionClass;
         $this->assertInstanceOf(Throwable::class, $exception);
         $this->assertSame('', $exception->getMessage());
         $this->assertSame(0, $exception->getCode());
@@ -50,26 +45,26 @@ class ExceptionsTest extends TestCase {
     }
 
     #[DataProvider('exceptionClassProvider')]
-    public function testExceptionWithMessage(string $exceptionClass): void {
+    public function test_exception_with_message(string $exceptionClass): void {
         $exception = new $exceptionClass('Testfehler');
         $this->assertSame('Testfehler', $exception->getMessage());
     }
 
     #[DataProvider('exceptionClassProvider')]
-    public function testExceptionWithCode(string $exceptionClass): void {
+    public function test_exception_with_code(string $exceptionClass): void {
         $exception = new $exceptionClass('Fehler', 42);
         $this->assertSame(42, $exception->getCode());
     }
 
     #[DataProvider('exceptionClassProvider')]
-    public function testExceptionWithPrevious(string $exceptionClass): void {
+    public function test_exception_with_previous(string $exceptionClass): void {
         $previous = new RuntimeException('Ursache');
         $exception = new $exceptionClass('Fehler', 0, $previous);
         $this->assertSame($previous, $exception->getPrevious());
     }
 
     #[DataProvider('exceptionClassProvider')]
-    public function testExceptionAcceptsThrowableAsPrevious(string $exceptionClass): void {
+    public function test_exception_accepts_throwable_as_previous(string $exceptionClass): void {
         // Throwable statt nur Exception - das ist der Fix den wir gemacht haben
         $previous = new \Error('Type Error');
         $exception = new $exceptionClass('Fehler', 0, $previous);
@@ -77,7 +72,7 @@ class ExceptionsTest extends TestCase {
     }
 
     #[DataProvider('exceptionClassProvider')]
-    public function testExceptionIsThrowable(string $exceptionClass): void {
+    public function test_exception_is_throwable(string $exceptionClass): void {
         try {
             throw new $exceptionClass('Test');
         } catch (Throwable $e) {
@@ -87,21 +82,21 @@ class ExceptionsTest extends TestCase {
         $this->fail('Exception was not thrown');
     }
 
-    public function testExceptionHierarchy(): void {
+    public function test_exception_hierarchy(): void {
         // FileSystemException extends RuntimeException
-        $this->assertInstanceOf(RuntimeException::class, new FileSystemException());
+        $this->assertInstanceOf(RuntimeException::class, new FileSystemException);
 
         // File*Exception extends FileSystemException
-        $this->assertInstanceOf(FileSystemException::class, new FileNotFoundException());
-        $this->assertInstanceOf(FileSystemException::class, new FileNotWrittenException());
-        $this->assertInstanceOf(FileSystemException::class, new FileExistsException());
-        $this->assertInstanceOf(FileSystemException::class, new FileInvalidException());
+        $this->assertInstanceOf(FileSystemException::class, new FileNotFoundException);
+        $this->assertInstanceOf(FileSystemException::class, new FileNotWrittenException);
+        $this->assertInstanceOf(FileSystemException::class, new FileExistsException);
+        $this->assertInstanceOf(FileSystemException::class, new FileInvalidException);
 
         // FolderNotFoundException extends FileNotFoundException
-        $this->assertInstanceOf(FileNotFoundException::class, new FolderNotFoundException());
+        $this->assertInstanceOf(FileNotFoundException::class, new FolderNotFoundException);
 
         // InvalidPasswordException extends RuntimeException (nicht FileSystemException)
-        $this->assertInstanceOf(RuntimeException::class, new InvalidPasswordException());
-        $this->assertNotInstanceOf(FileSystemException::class, new InvalidPasswordException());
+        $this->assertInstanceOf(RuntimeException::class, new InvalidPasswordException);
+        $this->assertNotInstanceOf(FileSystemException::class, new InvalidPasswordException);
     }
 }

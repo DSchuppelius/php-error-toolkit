@@ -13,8 +13,8 @@ declare(strict_types=1);
 namespace Tests;
 
 use ERRORToolkit\Exceptions\FileSystem\FileNotWrittenException;
-use PHPUnit\Framework\TestCase;
 use ERRORToolkit\Logger\FileLogger;
+use PHPUnit\Framework\TestCase;
 use Psr\Log\LogLevel;
 
 class FileLoggerTest extends TestCase {
@@ -35,7 +35,7 @@ class FileLoggerTest extends TestCase {
         }
     }
 
-    public function testLogsAtOrAboveThreshold() {
+    public function test_logs_at_or_above_threshold() {
         $logger = new FileLogger($this->testLogFile, LogLevel::WARNING, true, 5000000, true, enableDeduplication: false);
 
         $logger->log(LogLevel::INFO, "This is an info message");
@@ -51,7 +51,7 @@ class FileLoggerTest extends TestCase {
         $this->assertStringContainsString("This is an error message", $logContent, "ERROR sollte geloggt werden.");
     }
 
-    public function testUsesDefaultLogFileIfNoneProvided() {
+    public function test_uses_default_log_file_if_none_provided() {
         $logger = new FileLogger(null, LogLevel::DEBUG, true, 5000000, true, enableDeduplication: false);
         $logger->log(LogLevel::DEBUG, "Message in default file");
 
@@ -63,7 +63,7 @@ class FileLoggerTest extends TestCase {
         unlink($defaultLog);
     }
 
-    public function testFileCreationFailureThrowsException() {
+    public function test_file_creation_failure_throws_exception() {
         $nonWritableDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'no_write_' . uniqid();
         if (!mkdir($nonWritableDir) && !is_dir($nonWritableDir)) {
             $this->markTestSkipped("Konnte kein temporäres Verzeichnis erstellen, Test wird übersprungen.");
@@ -104,7 +104,7 @@ class FileLoggerTest extends TestCase {
         }
     }
 
-    public function testWriteFailureThrowsException() {
+    public function test_write_failure_throws_exception() {
         // Legt eine Logdatei an und entzieht die Schreibrechte, um den Schreibfehler zu simulieren.
         file_put_contents($this->testLogFile, "");
         chmod($this->testLogFile, 0400); // Nur Lese-Rechte

@@ -13,14 +13,14 @@ declare(strict_types=1);
 namespace Tests;
 
 use BadMethodCallException;
-use PHPUnit\Framework\TestCase;
-use ERRORToolkit\Traits\ErrorLog;
 use ERRORToolkit\Logger\ConsoleLogger;
 use ERRORToolkit\LoggerRegistry;
+use ERRORToolkit\Traits\ErrorLog;
 use Exception;
+use InvalidArgumentException;
+use PHPUnit\Framework\TestCase;
 use Psr\Log\LogLevel;
 use RuntimeException;
-use InvalidArgumentException;
 
 /**
  * Testklasse die das ErrorLog Trait verwendet
@@ -30,11 +30,13 @@ class ErrorLogTestClass {
 
     // Beispielmethode die einen Fehler loggt und eine Exception wirft (IDE Testzwecke)
     public function test(): string {
-        if (false)
+        if (false) {
             return "Unreachable";
+        }
 
-        if ($this->logWarningIf(true, "This is a warning"))
+        if ($this->logWarningIf(true, "This is a warning")) {
             return "Warning logged";
+        }
 
         $this->logErrorAndThrow(RuntimeException::class, "This is a test error");
     }
@@ -47,7 +49,7 @@ class ErrorLogTraitTest extends TestCase {
     private $stream;
 
     protected function setUp(): void {
-        $this->testInstance = new ErrorLogTestClass();
+        $this->testInstance = new ErrorLogTestClass;
         $this->stream = fopen('php://memory', 'r+');
         // Logger auf DEBUG setzen um alle Nachrichten zu erfassen
         // Deduplizierung deaktivieren für sofortige Ausgabe in Tests
@@ -73,7 +75,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: logInfo() als Instanzmethode
      */
-    public function testLogInfoInstance(): void {
+    public function test_log_info_instance(): void {
         $this->testInstance->logInfo("Test info message");
         $output = $this->getStreamOutput();
         $this->resetStream();
@@ -85,7 +87,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: logError() als Instanzmethode
      */
-    public function testLogErrorInstance(): void {
+    public function test_log_error_instance(): void {
         $this->testInstance->logError("Test error message");
         $output = $this->getStreamOutput();
         $this->resetStream();
@@ -97,7 +99,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: logWarning() als Instanzmethode
      */
-    public function testLogWarningInstance(): void {
+    public function test_log_warning_instance(): void {
         $this->testInstance->logWarning("Test warning message");
         $output = $this->getStreamOutput();
         $this->resetStream();
@@ -109,7 +111,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: logDebug() als Instanzmethode
      */
-    public function testLogDebugInstance(): void {
+    public function test_log_debug_instance(): void {
         $this->testInstance->logDebug("Test debug message");
         $output = $this->getStreamOutput();
         $this->resetStream();
@@ -121,7 +123,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: logInfoHex() als Instanzmethode
      */
-    public function testLogInfoHexInstance(): void {
+    public function test_log_info_hex_instance(): void {
         $this->testInstance->logInfoHex("ABC");
         $output = $this->getStreamOutput();
         $this->resetStream();
@@ -135,7 +137,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: logCritical() als Instanzmethode
      */
-    public function testLogCriticalInstance(): void {
+    public function test_log_critical_instance(): void {
         $this->testInstance->logCritical("Test critical message");
         $output = $this->getStreamOutput();
         $this->resetStream();
@@ -147,7 +149,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: logInfo() als statische Methode
      */
-    public function testLogInfoStatic(): void {
+    public function test_log_info_static(): void {
         ErrorLogTestClass::logInfo("Static info message");
         $output = $this->getStreamOutput();
         $this->resetStream();
@@ -159,7 +161,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: logError() als statische Methode
      */
-    public function testLogErrorStatic(): void {
+    public function test_log_error_static(): void {
         ErrorLogTestClass::logError("Static error message");
         $output = $this->getStreamOutput();
         $this->resetStream();
@@ -171,7 +173,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: logInfoHex() als statische Methode
      */
-    public function testLogInfoHexStatic(): void {
+    public function test_log_info_hex_static(): void {
         ErrorLogTestClass::logInfoHex("XYZ");
         $output = $this->getStreamOutput();
         $this->resetStream();
@@ -185,7 +187,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: logErrorAndThrow() als Instanzmethode
      */
-    public function testLogErrorAndThrowInstance(): void {
+    public function test_log_error_and_throw_instance(): void {
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage("Error that throws");
 
@@ -202,7 +204,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: logCriticalAndThrow() als statische Methode
      */
-    public function testLogCriticalAndThrowStatic(): void {
+    public function test_log_critical_and_throw_static(): void {
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage("Critical static error");
 
@@ -219,7 +221,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: logAndThrow mit Kontext
      */
-    public function testLogAndThrowWithContext(): void {
+    public function test_log_and_throw_with_context(): void {
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage("Error with context");
 
@@ -239,7 +241,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: logAndThrow mit vorheriger Exception (Chaining)
      */
-    public function testLogAndThrowWithPreviousException(): void {
+    public function test_log_and_throw_with_previous_exception(): void {
         $previousException = new Exception("Previous error");
 
         try {
@@ -261,7 +263,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: Ungültige Methode wirft BadMethodCallException (Instanz)
      */
-    public function testInvalidMethodThrowsBadMethodCallExceptionInstance(): void {
+    public function test_invalid_method_throws_bad_method_call_exception_instance(): void {
         $this->expectException(BadMethodCallException::class);
         $this->expectExceptionMessageMatches('/existiert nicht/');
 
@@ -271,7 +273,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: Ungültige Methode wirft BadMethodCallException (statisch)
      */
-    public function testInvalidMethodThrowsBadMethodCallExceptionStatic(): void {
+    public function test_invalid_method_throws_bad_method_call_exception_static(): void {
         $this->expectException(BadMethodCallException::class);
         $this->expectExceptionMessageMatches('/existiert nicht/');
 
@@ -281,7 +283,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: Alle Log-Level als Instanzmethoden
      */
-    public function testAllLogLevelsInstance(): void {
+    public function test_all_log_levels_instance(): void {
         $levels = ['Debug', 'Info', 'Notice', 'Warning', 'Error', 'Critical', 'Alert', 'Emergency'];
 
         foreach ($levels as $level) {
@@ -299,7 +301,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: Alle Log-Level als statische Methoden
      */
-    public function testAllLogLevelsStatic(): void {
+    public function test_all_log_levels_static(): void {
         $levels = ['Debug', 'Info', 'Notice', 'Warning', 'Error', 'Critical', 'Alert', 'Emergency'];
 
         foreach ($levels as $level) {
@@ -317,7 +319,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: Alle expliziten LogAndThrow-Varianten (Error, Critical, Alert, Emergency)
      */
-    public function testAllLogAndThrowLevels(): void {
+    public function test_all_log_and_throw_levels(): void {
         $levels = ['Error', 'Critical', 'Alert', 'Emergency'];
 
         foreach ($levels as $level) {
@@ -343,14 +345,14 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: hasLogger() gibt true zurück wenn Logger gesetzt
      */
-    public function testHasLoggerReturnsTrue(): void {
+    public function test_has_logger_returns_true(): void {
         $this->assertTrue(ErrorLogTestClass::hasLogger());
     }
 
     /**
      * Test: getLogger() gibt den gesetzten Logger zurück
      */
-    public function testGetLoggerReturnsLogger(): void {
+    public function test_get_logger_returns_logger(): void {
         $logger = ErrorLogTestClass::getLogger();
         $this->assertInstanceOf(ConsoleLogger::class, $logger);
     }
@@ -358,7 +360,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: logException() loggt eine Exception mit Details
      */
-    public function testLogException(): void {
+    public function test_log_exception(): void {
         $exception = new RuntimeException("Test exception message");
 
         ErrorLogTestClass::logException($exception);
@@ -373,7 +375,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: logException() mit benutzerdefiniertem Level
      */
-    public function testLogExceptionWithCustomLevel(): void {
+    public function test_log_exception_with_custom_level(): void {
         $exception = new InvalidArgumentException("Invalid argument");
 
         ErrorLogTestClass::logException($exception, LogLevel::WARNING);
@@ -387,7 +389,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: logException() mit verketteter Exception
      */
-    public function testLogExceptionWithPreviousException(): void {
+    public function test_log_exception_with_previous_exception(): void {
         $previous = new Exception("Previous exception");
         $exception = new RuntimeException("Main exception", 0, $previous);
 
@@ -401,7 +403,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: logWarningIf() loggt nur wenn Bedingung wahr ist
      */
-    public function testLogWarningIfTrue(): void {
+    public function test_log_warning_if_true(): void {
         ErrorLogTestClass::logWarningIf(true, "Should be logged");
         $output = $this->getStreamOutput();
         $this->resetStream();
@@ -413,7 +415,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: logWarningIf() loggt nicht wenn Bedingung falsch ist
      */
-    public function testLogWarningIfFalse(): void {
+    public function test_log_warning_if_false(): void {
         ErrorLogTestClass::logWarningIf(false, "Should NOT be logged");
         $output = $this->getStreamOutput();
         $this->resetStream();
@@ -424,7 +426,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: logErrorUnless() loggt nur wenn Bedingung falsch ist
      */
-    public function testLogErrorUnlessFalse(): void {
+    public function test_log_error_unless_false(): void {
         ErrorLogTestClass::logErrorUnless(false, "Should be logged");
         $output = $this->getStreamOutput();
         $this->resetStream();
@@ -436,7 +438,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: logErrorUnless() loggt nicht wenn Bedingung wahr ist
      */
-    public function testLogErrorUnlessTrue(): void {
+    public function test_log_error_unless_true(): void {
         ErrorLogTestClass::logErrorUnless(true, "Should NOT be logged");
         $output = $this->getStreamOutput();
         $this->resetStream();
@@ -447,7 +449,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: Alle Log-Level If Varianten
      */
-    public function testAllLogLevelsIf(): void {
+    public function test_all_log_levels_if(): void {
         $levels = ['Debug', 'Info', 'Notice', 'Warning', 'Error', 'Critical', 'Alert', 'Emergency'];
 
         foreach ($levels as $level) {
@@ -470,7 +472,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: Alle Log-Level Unless Varianten
      */
-    public function testAllLogLevelsUnless(): void {
+    public function test_all_log_levels_unless(): void {
         $levels = ['Debug', 'Info', 'Notice', 'Warning', 'Error', 'Critical', 'Alert', 'Emergency'];
 
         foreach ($levels as $level) {
@@ -493,7 +495,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: logDebugWithTimer() führt Callback aus und loggt Zeit
      */
-    public function testLogDebugWithTimer(): void {
+    public function test_log_debug_with_timer(): void {
         $result = ErrorLogTestClass::logDebugWithTimer(function () {
             usleep(10000); // 10ms warten
             return "timer result";
@@ -511,7 +513,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: logInfoWithTimer() führt Callback aus und loggt Zeit auf Info-Level
      */
-    public function testLogInfoWithTimer(): void {
+    public function test_log_info_with_timer(): void {
         $result = ErrorLogTestClass::logInfoWithTimer(function () {
             return 42;
         }, "Calculate answer");
@@ -526,7 +528,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: logWarningWithTimer() loggt Fehler bei Exception
      */
-    public function testLogWarningWithTimerOnException(): void {
+    public function test_log_warning_with_timer_on_exception(): void {
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage("Timer callback failed");
 
@@ -545,7 +547,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: Alle Log-Level WithTimer Varianten
      */
-    public function testAllLogLevelsWithTimer(): void {
+    public function test_all_log_levels_with_timer(): void {
         $levels = ['Debug', 'Info', 'Notice', 'Warning', 'Error', 'Critical', 'Alert', 'Emergency'];
 
         foreach ($levels as $level) {
@@ -566,7 +568,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: logDebugAndReturn() loggt und gibt Wert zurück
      */
-    public function testLogDebugAndReturn(): void {
+    public function test_log_debug_and_return(): void {
         $result = ErrorLogTestClass::logDebugAndReturn(
             ["key" => "value"],
             "Returning data"
@@ -582,7 +584,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: logInfoAndReturn() loggt auf Info-Level und gibt Wert zurück
      */
-    public function testLogInfoAndReturn(): void {
+    public function test_log_info_and_return(): void {
         $result = ErrorLogTestClass::logInfoAndReturn("string value", "String returned");
         $output = $this->getStreamOutput();
         $this->resetStream();
@@ -595,7 +597,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: Alle Log-Level AndReturn Varianten
      */
-    public function testAllLogLevelsAndReturn(): void {
+    public function test_all_log_levels_and_return(): void {
         $levels = ['Debug', 'Info', 'Notice', 'Warning', 'Error', 'Critical', 'Alert', 'Emergency'];
 
         foreach ($levels as $level) {
@@ -614,7 +616,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: logWarningAndReturn() mit Kontext
      */
-    public function testLogWarningAndReturnWithContext(): void {
+    public function test_log_warning_and_return_with_context(): void {
         $result = ErrorLogTestClass::logWarningAndReturn(
             null,
             "Warning with context",
@@ -631,7 +633,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: logInfoIf() als Instanzmethode
      */
-    public function testLogInfoIfInstance(): void {
+    public function test_log_info_if_instance(): void {
         $this->testInstance->logInfoIf(true, "Instance conditional log");
         $output = $this->getStreamOutput();
         $this->resetStream();
@@ -642,7 +644,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: logDebugAndReturn() als Instanzmethode
      */
-    public function testLogDebugAndReturnInstance(): void {
+    public function test_log_debug_and_return_instance(): void {
         $result = $this->testInstance->logDebugAndReturn(100, "Instance return");
         $output = $this->getStreamOutput();
         $this->resetStream();
@@ -654,7 +656,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: logInfoWithTimer() als Instanzmethode
      */
-    public function testLogInfoWithTimerInstance(): void {
+    public function test_log_info_with_timer_instance(): void {
         $result = $this->testInstance->logInfoWithTimer(function () {
             return "instance timer result";
         }, "Instance timer operation");
@@ -668,7 +670,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: logWithTimer mit ungültigem Argument wirft Exception
      */
-    public function testLogWithTimerInvalidArgumentThrowsException(): void {
+    public function test_log_with_timer_invalid_argument_throws_exception(): void {
         $this->expectException(BadMethodCallException::class);
         $this->expectExceptionMessageMatches('/Closure/');
 
@@ -678,7 +680,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: createDebugContext() enthält Debug-Informationen
      */
-    public function testCreateDebugContext(): void {
+    public function test_create_debug_context(): void {
         $context = ErrorLogTestClass::createDebugContext(['custom' => 'value']);
 
         $this->assertArrayHasKey('_debug', $context);
@@ -696,12 +698,12 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: interpolateMessage() ersetzt Platzhalter
      */
-    public function testInterpolateMessage(): void {
+    public function test_interpolate_message(): void {
         $message = "User {user} performed {action} on {item}";
         $context = [
             'user' => 'admin',
             'action' => 'delete',
-            'item' => 'file.txt'
+            'item' => 'file.txt',
         ];
 
         $result = ErrorLogTestClass::interpolateMessage($message, $context);
@@ -712,7 +714,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: interpolateMessage() behandelt verschiedene Typen
      */
-    public function testInterpolateMessageWithDifferentTypes(): void {
+    public function test_interpolate_message_with_different_types(): void {
         $message = "Count: {count}, Data: {data}, Object: {obj}";
         $context = [
             'count' => 42,
@@ -721,7 +723,7 @@ class ErrorLogTraitTest extends TestCase {
                 public function __toString() {
                     return 'MyObject';
                 }
-            }
+            },
         ];
 
         $result = ErrorLogTestClass::interpolateMessage($message, $context);
@@ -734,11 +736,11 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: interpolateMessage() ignoriert interne Schlüssel
      */
-    public function testInterpolateMessageIgnoresInternalKeys(): void {
+    public function test_interpolate_message_ignores_internal_keys(): void {
         $message = "Value: {value}, Debug: {_debug}";
         $context = [
             'value' => 'test',
-            '_debug' => 'should not appear'
+            '_debug' => 'should not appear',
         ];
 
         $result = ErrorLogTestClass::interpolateMessage($message, $context);
@@ -750,7 +752,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: logErrorAndThrow() mit Exception-Code
      */
-    public function testLogErrorAndThrowWithCode(): void {
+    public function test_log_error_and_throw_with_code(): void {
         try {
             ErrorLogTestClass::logErrorAndThrow(
                 RuntimeException::class,
@@ -769,11 +771,11 @@ class ErrorLogTraitTest extends TestCase {
 
     /**
      * Test: createDebugContext() zeigt externen Caller, nicht interne Trait-Methoden
-     * 
+     *
      * Stellt sicher, dass interne Methoden wie doLogAndThrow, handleStandardLog etc.
      * im Debug-Kontext nicht erscheinen, sondern die erste externe aufrufende Methode.
      */
-    public function testCreateDebugContextShowsExternalCaller(): void {
+    public function test_create_debug_context_shows_external_caller(): void {
         // Rufe createDebugContext aus einer Wrapper-Methode auf
         $context = $this->wrapperMethodForDebugContext();
 
@@ -796,11 +798,11 @@ class ErrorLogTraitTest extends TestCase {
 
     /**
      * Test: Interne Trait-Methoden erscheinen nicht im Debug-Kontext
-     * 
+     *
      * Simuliert einen Aufruf wie ConfigLoader::logErrorAndThrow() und prüft,
      * dass doLogAndThrow nicht als Caller erscheint.
      */
-    public function testInternalMethodsAreSkippedInDebugContext(): void {
+    public function test_internal_methods_are_skipped_in_debug_context(): void {
         $context = $this->simulateExternalLibraryCall();
 
         $this->assertArrayHasKey('_debug', $context);
@@ -834,7 +836,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: Verschachtelte Aufrufe zeigen den korrekten externen Caller
      */
-    public function testNestedCallsShowCorrectExternalCaller(): void {
+    public function test_nested_calls_show_correct_external_caller(): void {
         $context = $this->outerMethod();
 
         $this->assertArrayHasKey('_debug', $context);
@@ -854,11 +856,11 @@ class ErrorLogTraitTest extends TestCase {
 
     /**
      * Test: Bei Aufruf ohne Klassen-Kontext (Script) wird {script} als Funktion zurückgegeben
-     * 
+     *
      * Dieser Test simuliert einen Aufruf aus globalem Scope, indem geprüft wird,
      * dass die Funktion '{script}' zurückgegeben wird, wenn kein Caller-Frame existiert.
      */
-    public function testScriptCallReturnsScriptAsFunction(): void {
+    public function test_script_call_returns_script_as_function(): void {
         // Erstelle einen Kontext direkt aus der Test-Methode (wird als normaler Aufruf erkannt)
         $context = ErrorLogTestClass::createDebugContext();
 
@@ -874,7 +876,7 @@ class ErrorLogTraitTest extends TestCase {
     /**
      * Test: Debug-Kontext enthält alle erwarteten Felder
      */
-    public function testDebugContextContainsAllExpectedFields(): void {
+    public function test_debug_context_contains_all_expected_fields(): void {
         $context = ErrorLogTestClass::createDebugContext(['custom' => 'value']);
 
         $this->assertArrayHasKey('_debug', $context);

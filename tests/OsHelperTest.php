@@ -12,70 +12,70 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use PHPUnit\Framework\TestCase;
 use ERRORToolkit\Helper\OsHelper;
+use PHPUnit\Framework\TestCase;
 
 class OsHelperTest extends TestCase {
-    public function testIsWindowsReturnsBool(): void {
+    public function test_is_windows_returns_bool(): void {
         $this->assertIsBool(OsHelper::isWindows());
     }
 
-    public function testIsLinuxReturnsBool(): void {
+    public function test_is_linux_returns_bool(): void {
         $this->assertIsBool(OsHelper::isLinux());
     }
 
-    public function testIsMacOSReturnsBool(): void {
+    public function test_is_mac_os_returns_bool(): void {
         $this->assertIsBool(OsHelper::isMacOS());
     }
 
-    public function testIsUnixReturnsBool(): void {
+    public function test_is_unix_returns_bool(): void {
         $this->assertIsBool(OsHelper::isUnix());
     }
 
-    public function testGetOsNameReturnsNonEmpty(): void {
+    public function test_get_os_name_returns_non_empty(): void {
         $name = OsHelper::getOsName();
         $this->assertNotEmpty($name);
         $this->assertContains($name, ['Windows', 'Linux', 'macOS', PHP_OS]);
     }
 
-    public function testGetPathSeparator(): void {
+    public function test_get_path_separator(): void {
         $sep = OsHelper::getPathSeparator();
         $this->assertContains($sep, ['/', '\\']);
     }
 
-    public function testGetEnvPathSeparator(): void {
+    public function test_get_env_path_separator(): void {
         $sep = OsHelper::getEnvPathSeparator();
         $this->assertContains($sep, [':', ';']);
     }
 
-    public function testGetHomeDirectoryReturnsString(): void {
+    public function test_get_home_directory_returns_string(): void {
         $home = OsHelper::getHomeDirectory();
         $this->assertIsString($home);
     }
 
-    public function testGetTempDirectory(): void {
+    public function test_get_temp_directory(): void {
         $tmp = OsHelper::getTempDirectory();
         $this->assertNotEmpty($tmp);
         $this->assertDirectoryExists($tmp);
     }
 
-    public function testGetEnvWithExistingVariable(): void {
+    public function test_get_env_with_existing_variable(): void {
         $_SERVER['TEST_OSHELPER_VAR'] = 'test_value';
         $this->assertSame('test_value', OsHelper::getEnv('TEST_OSHELPER_VAR'));
         unset($_SERVER['TEST_OSHELPER_VAR']);
     }
 
-    public function testGetEnvWithDefault(): void {
+    public function test_get_env_with_default(): void {
         $result = OsHelper::getEnv('NONEXISTENT_VAR_XYZABC', 'default');
         $this->assertSame('default', $result);
     }
 
-    public function testGetEnvReturnsNullWithoutDefault(): void {
+    public function test_get_env_returns_null_without_default(): void {
         $result = OsHelper::getEnv('NONEXISTENT_VAR_XYZABC');
         $this->assertNull($result);
     }
 
-    public function testSetEnv(): void {
+    public function test_set_env(): void {
         $result = OsHelper::setEnv('TEST_OSHELPER_SET', 'hello');
         $this->assertTrue($result);
         $this->assertSame('hello', OsHelper::getEnv('TEST_OSHELPER_SET'));
@@ -85,30 +85,30 @@ class OsHelperTest extends TestCase {
         unset($_SERVER['TEST_OSHELPER_SET']);
     }
 
-    public function testIsExecutableWithNonExistentFile(): void {
+    public function test_is_executable_with_non_existent_file(): void {
         $this->assertFalse(OsHelper::isExecutable('/nonexistent/path/to/file'));
     }
 
-    public function testFindExecutableWithNonExistentCommand(): void {
+    public function test_find_executable_with_non_existent_command(): void {
         $this->assertNull(OsHelper::findExecutable('nonexistent_command_xyzabc'));
     }
 
-    public function testGetCpuCoreCountReturnsPositive(): void {
+    public function test_get_cpu_core_count_returns_positive(): void {
         $cores = OsHelper::getCpuCoreCount();
         $this->assertGreaterThanOrEqual(1, $cores);
     }
 
-    public function testGetArchitectureReturnsNonEmpty(): void {
+    public function test_get_architecture_returns_non_empty(): void {
         $arch = OsHelper::getArchitecture();
         $this->assertNotEmpty($arch);
     }
 
-    public function testGetKernelVersionReturnsNonEmpty(): void {
+    public function test_get_kernel_version_returns_non_empty(): void {
         $version = OsHelper::getKernelVersion();
         $this->assertNotEmpty($version);
     }
 
-    public function testGetSystemInfoReturnsExpectedKeys(): void {
+    public function test_get_system_info_returns_expected_keys(): void {
         $info = OsHelper::getSystemInfo();
         $this->assertArrayHasKey('os', $info);
         $this->assertArrayHasKey('php_os', $info);
@@ -117,16 +117,16 @@ class OsHelperTest extends TestCase {
         $this->assertArrayHasKey('hostname', $info);
     }
 
-    public function testGetCurrentUsernameReturnsString(): void {
+    public function test_get_current_username_returns_string(): void {
         $username = OsHelper::getCurrentUsername();
         $this->assertIsString($username);
     }
 
-    public function testIsPrivilegedUserReturnsBool(): void {
+    public function test_is_privileged_user_returns_bool(): void {
         $this->assertIsBool(OsHelper::isPrivilegedUser());
     }
 
-    public function testOsDetectionConsistency(): void {
+    public function test_os_detection_consistency(): void {
         // Genau ein System-Typ sollte true sein (oder keiner bei exotischen OS)
         $detected = array_filter([
             OsHelper::isWindows(),

@@ -212,17 +212,17 @@ class OsHelper {
     public static function getCpuCoreCount(): int {
         if (self::isWindows()) {
             $cores = shell_exec('echo %NUMBER_OF_PROCESSORS%');
-            return (int)trim($cores ?: '1');
+            return (int) trim($cores ?: '1');
         }
 
         if (self::isLinux()) {
             $cores = shell_exec('nproc');
-            return (int)trim($cores ?: '1');
+            return (int) trim($cores ?: '1');
         }
 
         if (self::isMacOS()) {
             $cores = shell_exec('sysctl -n hw.ncpu');
-            return (int)trim($cores ?: '1');
+            return (int) trim($cores ?: '1');
         }
 
         return 1;

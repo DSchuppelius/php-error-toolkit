@@ -12,14 +12,10 @@ declare(strict_types=1);
 
 namespace Tests;
 
+use ERRORToolkit\Factories\{ConsoleLoggerFactory, FileLoggerFactory, NullLoggerFactory};
+use ERRORToolkit\Logger\{ConsoleLogger, FileLogger};
 use PHPUnit\Framework\TestCase;
-use ERRORToolkit\Factories\ConsoleLoggerFactory;
-use ERRORToolkit\Factories\FileLoggerFactory;
-use ERRORToolkit\Factories\NullLoggerFactory;
-use ERRORToolkit\Logger\ConsoleLogger;
-use ERRORToolkit\Logger\FileLogger;
-use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
+use Psr\Log\{LoggerInterface, NullLogger};
 
 class LoggerFactoriesTest extends TestCase {
     protected function tearDown(): void {
@@ -32,19 +28,19 @@ class LoggerFactoriesTest extends TestCase {
     // NullLoggerFactory
     // ========================================================================
 
-    public function testNullLoggerFactoryReturnsNullLogger(): void {
+    public function test_null_logger_factory_returns_null_logger(): void {
         $logger = NullLoggerFactory::getLogger();
         $this->assertInstanceOf(NullLogger::class, $logger);
         $this->assertInstanceOf(LoggerInterface::class, $logger);
     }
 
-    public function testNullLoggerFactoryReturnsSameInstance(): void {
+    public function test_null_logger_factory_returns_same_instance(): void {
         $first = NullLoggerFactory::getLogger();
         $second = NullLoggerFactory::getLogger();
         $this->assertSame($first, $second);
     }
 
-    public function testNullLoggerFactoryResetCreatesNewInstance(): void {
+    public function test_null_logger_factory_reset_creates_new_instance(): void {
         $first = NullLoggerFactory::getLogger();
         NullLoggerFactory::resetLogger();
         $second = NullLoggerFactory::getLogger();
@@ -55,19 +51,19 @@ class LoggerFactoriesTest extends TestCase {
     // ConsoleLoggerFactory
     // ========================================================================
 
-    public function testConsoleLoggerFactoryReturnsConsoleLogger(): void {
+    public function test_console_logger_factory_returns_console_logger(): void {
         $logger = ConsoleLoggerFactory::getLogger();
         $this->assertInstanceOf(ConsoleLogger::class, $logger);
         $this->assertInstanceOf(LoggerInterface::class, $logger);
     }
 
-    public function testConsoleLoggerFactoryReturnsSameInstance(): void {
+    public function test_console_logger_factory_returns_same_instance(): void {
         $first = ConsoleLoggerFactory::getLogger();
         $second = ConsoleLoggerFactory::getLogger();
         $this->assertSame($first, $second);
     }
 
-    public function testConsoleLoggerFactoryResetCreatesNewInstance(): void {
+    public function test_console_logger_factory_reset_creates_new_instance(): void {
         $first = ConsoleLoggerFactory::getLogger();
         ConsoleLoggerFactory::resetLogger();
         $second = ConsoleLoggerFactory::getLogger();
@@ -78,7 +74,7 @@ class LoggerFactoriesTest extends TestCase {
     // FileLoggerFactory
     // ========================================================================
 
-    public function testFileLoggerFactoryReturnsFileLogger(): void {
+    public function test_file_logger_factory_returns_file_logger(): void {
         $logFile = sys_get_temp_dir() . '/test_factory_' . uniqid() . '.log';
         $logger = FileLoggerFactory::getLogger($logFile);
         $this->assertInstanceOf(FileLogger::class, $logger);
@@ -87,7 +83,7 @@ class LoggerFactoriesTest extends TestCase {
         @unlink($logFile);
     }
 
-    public function testFileLoggerFactoryReturnsSameInstance(): void {
+    public function test_file_logger_factory_returns_same_instance(): void {
         $logFile = sys_get_temp_dir() . '/test_factory_' . uniqid() . '.log';
         $first = FileLoggerFactory::getLogger($logFile);
         $second = FileLoggerFactory::getLogger();
@@ -96,7 +92,7 @@ class LoggerFactoriesTest extends TestCase {
         @unlink($logFile);
     }
 
-    public function testFileLoggerFactoryResetCreatesNewInstance(): void {
+    public function test_file_logger_factory_reset_creates_new_instance(): void {
         $logFile1 = sys_get_temp_dir() . '/test_factory_' . uniqid() . '.log';
         $logFile2 = sys_get_temp_dir() . '/test_factory_' . uniqid() . '.log';
 

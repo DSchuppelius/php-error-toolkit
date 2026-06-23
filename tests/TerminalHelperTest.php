@@ -12,32 +12,32 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use PHPUnit\Framework\TestCase;
 use ERRORToolkit\Helper\TerminalHelper;
+use PHPUnit\Framework\TestCase;
 
 class TerminalHelperTest extends TestCase {
-    public function testIsDebugConsole() {
+    public function test_is_debug_console() {
         $result = TerminalHelper::isDebugConsole();
         $this->assertIsBool($result);
     }
 
-    public function testIsTerminal() {
+    public function test_is_terminal() {
         $result = TerminalHelper::isTerminal();
         $this->assertIsBool($result);
     }
 
-    public function testSupportsColors() {
+    public function test_supports_colors() {
         $result = TerminalHelper::supportsColors();
         $this->assertIsBool($result);
     }
 
-    public function testGetTerminalWidth() {
+    public function test_get_terminal_width() {
         $result = TerminalHelper::getTerminalWidth();
         $this->assertIsInt($result);
         $this->assertGreaterThan(0, $result);
     }
 
-    public function testGetTerminalHeight() {
+    public function test_get_terminal_height() {
         $result = TerminalHelper::getTerminalHeight();
         $this->assertIsInt($result);
         $this->assertGreaterThan(0, $result);

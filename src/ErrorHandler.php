@@ -13,7 +13,7 @@ declare(strict_types=1);
 namespace ERRORToolkit;
 
 use ErrorException;
-use Psr\Log\{LoggerInterface, LogLevel};
+use Psr\Log\{LogLevel, LoggerInterface};
 use Throwable;
 
 /**
@@ -55,38 +55,38 @@ class ErrorHandler {
 
     /** Error-Severity → PSR-3 LogLevel Mapping */
     private const SEVERITY_MAP = [
-        E_ERROR             => LogLevel::CRITICAL,
-        E_WARNING           => LogLevel::WARNING,
-        E_PARSE             => LogLevel::CRITICAL,
-        E_NOTICE            => LogLevel::NOTICE,
-        E_CORE_ERROR        => LogLevel::CRITICAL,
-        E_CORE_WARNING      => LogLevel::WARNING,
-        E_COMPILE_ERROR     => LogLevel::CRITICAL,
-        E_COMPILE_WARNING   => LogLevel::WARNING,
-        E_USER_ERROR        => LogLevel::ERROR,
-        E_USER_WARNING      => LogLevel::WARNING,
-        E_USER_NOTICE       => LogLevel::NOTICE,
+        E_ERROR => LogLevel::CRITICAL,
+        E_WARNING => LogLevel::WARNING,
+        E_PARSE => LogLevel::CRITICAL,
+        E_NOTICE => LogLevel::NOTICE,
+        E_CORE_ERROR => LogLevel::CRITICAL,
+        E_CORE_WARNING => LogLevel::WARNING,
+        E_COMPILE_ERROR => LogLevel::CRITICAL,
+        E_COMPILE_WARNING => LogLevel::WARNING,
+        E_USER_ERROR => LogLevel::ERROR,
+        E_USER_WARNING => LogLevel::WARNING,
+        E_USER_NOTICE => LogLevel::NOTICE,
         E_RECOVERABLE_ERROR => LogLevel::ERROR,
-        E_DEPRECATED        => LogLevel::NOTICE,
-        E_USER_DEPRECATED   => LogLevel::NOTICE,
+        E_DEPRECATED => LogLevel::NOTICE,
+        E_USER_DEPRECATED => LogLevel::NOTICE,
     ];
 
     /** Error-Severity → Menschenlesbarer Name */
     private const SEVERITY_NAMES = [
-        E_ERROR             => 'E_ERROR',
-        E_WARNING           => 'E_WARNING',
-        E_PARSE             => 'E_PARSE',
-        E_NOTICE            => 'E_NOTICE',
-        E_CORE_ERROR        => 'E_CORE_ERROR',
-        E_CORE_WARNING      => 'E_CORE_WARNING',
-        E_COMPILE_ERROR     => 'E_COMPILE_ERROR',
-        E_COMPILE_WARNING   => 'E_COMPILE_WARNING',
-        E_USER_ERROR        => 'E_USER_ERROR',
-        E_USER_WARNING      => 'E_USER_WARNING',
-        E_USER_NOTICE       => 'E_USER_NOTICE',
+        E_ERROR => 'E_ERROR',
+        E_WARNING => 'E_WARNING',
+        E_PARSE => 'E_PARSE',
+        E_NOTICE => 'E_NOTICE',
+        E_CORE_ERROR => 'E_CORE_ERROR',
+        E_CORE_WARNING => 'E_CORE_WARNING',
+        E_COMPILE_ERROR => 'E_COMPILE_ERROR',
+        E_COMPILE_WARNING => 'E_COMPILE_WARNING',
+        E_USER_ERROR => 'E_USER_ERROR',
+        E_USER_WARNING => 'E_USER_WARNING',
+        E_USER_NOTICE => 'E_USER_NOTICE',
         E_RECOVERABLE_ERROR => 'E_RECOVERABLE_ERROR',
-        E_DEPRECATED        => 'E_DEPRECATED',
-        E_USER_DEPRECATED   => 'E_USER_DEPRECATED',
+        E_DEPRECATED => 'E_DEPRECATED',
+        E_USER_DEPRECATED => 'E_USER_DEPRECATED',
     ];
 
     /** Fatale Error-Typen die im Shutdown-Handler erkannt werden */
@@ -141,7 +141,7 @@ class ErrorHandler {
         restore_error_handler();
         restore_exception_handler();
 
-        $this->memoryReserve = null;
+        $this->freeMemoryReserve();
         $this->listeners = [];
         $this->registered = false;
         self::$activeInstance = null;
@@ -243,7 +243,7 @@ class ErrorHandler {
      */
     public function handleShutdown(): void {
         // Memory-Reserve freigeben damit im OOM-Fall noch geloggt werden kann
-        $this->memoryReserve = null;
+        $this->freeMemoryReserve();
 
         $error = error_get_last();
 
@@ -255,7 +255,7 @@ class ErrorHandler {
             return;
         }
 
-        $severityName = self::SEVERITY_NAMES[$error['type']] ?? 'FATAL';
+        $severityName = self::SEVERITY_NAMES[$error['type']];
 
         $this->log(LogLevel::EMERGENCY, sprintf(
             'Fataler Fehler [%s]: %s in %s:%d',
@@ -290,6 +290,25 @@ class ErrorHandler {
 
         $this->registered = true;
         self::$activeInstance = $this;
+    }
+
+    /**
+     * Gibt die reservierte Memory-Reserve frei (idempotent).
+     *
+     * Wird im Shutdown und beim unregister() aufgerufen, damit im OOM-Fall
+     * wieder Speicher zum Loggen des fatalen Fehlers zur Verfügung steht.
+     *
+     * @return int Anzahl der freigegebenen Bytes (0 wenn keine Reserve aktiv war)
+     */
+    private function freeMemoryReserve(): int {
+        if ($this->memoryReserve === null) {
+            return 0;
+        }
+
+        $freedBytes = strlen($this->memoryReserve);
+        $this->memoryReserve = null;
+
+        return $freedBytes;
     }
 
     /**

@@ -72,7 +72,8 @@ class FileLogger extends LoggerAbstract {
         }
 
         // Datei mit exklusivem Lock schreiben (atomar, prozesssicher)
-        if (@file_put_contents($this->logFile, $logEntry, FILE_APPEND | LOCK_EX) === false) {
+        $written = @file_put_contents($this->logFile, $logEntry, FILE_APPEND | LOCK_EX);
+        if ($written === false) {
             clearstatcache(true, $this->logFile);
             // Datei existiert möglicherweise nicht mehr nach Rotation durch anderen Prozess
             if (!file_exists($this->logFile)) {
@@ -80,12 +81,12 @@ class FileLogger extends LoggerAbstract {
                 @file_put_contents($this->logFile, $initialContent);
                 @chmod($this->logFile, $this->filePermissions);
             }
-            if (@file_put_contents($this->logFile, $logEntry, FILE_APPEND | LOCK_EX) === false) {
+            $retried = @file_put_contents($this->logFile, $logEntry, FILE_APPEND | LOCK_EX);
+            if ($retried === false) {
                 $this->handleWriteError("Fehler beim Schreiben in die Logdatei");
             }
         }
     }
-
 
     public function getMaxFileSize(): int {
         return $this->maxFileSize;

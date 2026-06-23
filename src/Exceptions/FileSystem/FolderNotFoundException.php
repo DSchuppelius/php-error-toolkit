@@ -15,7 +15,6 @@ namespace ERRORToolkit\Exceptions\FileSystem;
 use Throwable;
 
 final class FolderNotFoundException extends FileNotFoundException {
-
     public function __construct(string $message = '', int $code = 0, ?Throwable $previous = null) {
         parent::__construct($message, $code, $previous);
     }

@@ -16,13 +16,12 @@ use BadMethodCallException;
 use Closure;
 use ERRORToolkit\Contracts\Abstracts\LoggerAbstract;
 use ERRORToolkit\LoggerRegistry;
-use Psr\Log\LoggerInterface;
-use Psr\Log\LogLevel;
+use Psr\Log\{LogLevel, LoggerInterface};
 use Throwable;
 
 /**
  * ErrorLog Trait - Provides convenient logging methods via magic methods.
- * 
+ *
  * Logging methods (return void):
  * @method void logDebug(string $message, array $context = [])
  * @method void logInfo(string $message, array $context = [])
@@ -40,7 +39,7 @@ use Throwable;
  * @method void logCriticalHex(string $message, array $context = [])
  * @method void logAlertHex(string $message, array $context = [])
  * @method void logEmergencyHex(string $message, array $context = [])
- * 
+ *
  * Static logging methods (return void):
  * @method static void logDebug(string $message, array $context = [])
  * @method static void logInfo(string $message, array $context = [])
@@ -58,13 +57,13 @@ use Throwable;
  * @method static void logCriticalHex(string $message, array $context = [])
  * @method static void logAlertHex(string $message, array $context = [])
  * @method static void logEmergencyHex(string $message, array $context = [])
- * 
+ *
  * Log and throw methods (log message and throw exception, never returns):
  * @method static never logErrorAndThrow(string $exceptionClass, string $message, array $context = [], ?Throwable $previous = null, int $code = 0)
  * @method static never logCriticalAndThrow(string $exceptionClass, string $message, array $context = [], ?Throwable $previous = null, int $code = 0)
  * @method static never logAlertAndThrow(string $exceptionClass, string $message, array $context = [], ?Throwable $previous = null, int $code = 0)
  * @method static never logEmergencyAndThrow(string $exceptionClass, string $message, array $context = [], ?Throwable $previous = null, int $code = 0)
- * 
+ *
  * Conditional logging methods (log if condition is true):
  * @method void logDebugIf(bool $condition, string $message, array $context = [])
  * @method void logInfoIf(bool $condition, string $message, array $context = [])
@@ -74,7 +73,7 @@ use Throwable;
  * @method void logCriticalIf(bool $condition, string $message, array $context = [])
  * @method void logAlertIf(bool $condition, string $message, array $context = [])
  * @method void logEmergencyIf(bool $condition, string $message, array $context = [])
- * 
+ *
  * Static conditional logging methods (log if condition is true):
  * @method static void logDebugIf(bool $condition, string $message, array $context = [])
  * @method static void logInfoIf(bool $condition, string $message, array $context = [])
@@ -84,7 +83,7 @@ use Throwable;
  * @method static void logCriticalIf(bool $condition, string $message, array $context = [])
  * @method static void logAlertIf(bool $condition, string $message, array $context = [])
  * @method static void logEmergencyIf(bool $condition, string $message, array $context = [])
- * 
+ *
  * Conditional logging methods (log if condition is false):
  * @method void logDebugUnless(bool $condition, string $message, array $context = [])
  * @method void logInfoUnless(bool $condition, string $message, array $context = [])
@@ -94,7 +93,7 @@ use Throwable;
  * @method void logCriticalUnless(bool $condition, string $message, array $context = [])
  * @method void logAlertUnless(bool $condition, string $message, array $context = [])
  * @method void logEmergencyUnless(bool $condition, string $message, array $context = [])
- * 
+ *
  * Static conditional logging methods (log if condition is false):
  * @method static void logDebugUnless(bool $condition, string $message, array $context = [])
  * @method static void logInfoUnless(bool $condition, string $message, array $context = [])
@@ -104,7 +103,7 @@ use Throwable;
  * @method static void logCriticalUnless(bool $condition, string $message, array $context = [])
  * @method static void logAlertUnless(bool $condition, string $message, array $context = [])
  * @method static void logEmergencyUnless(bool $condition, string $message, array $context = [])
- * 
+ *
  * Log and return methods (log message and return value):
  * @method mixed logDebugAndReturn(mixed $value, string $message, array $context = [])
  * @method mixed logInfoAndReturn(mixed $value, string $message, array $context = [])
@@ -114,7 +113,7 @@ use Throwable;
  * @method mixed logCriticalAndReturn(mixed $value, string $message, array $context = [])
  * @method mixed logAlertAndReturn(mixed $value, string $message, array $context = [])
  * @method mixed logEmergencyAndReturn(mixed $value, string $message, array $context = [])
- * 
+ *
  * Static log and return methods:
  * @method static mixed logDebugAndReturn(mixed $value, string $message, array $context = [])
  * @method static mixed logInfoAndReturn(mixed $value, string $message, array $context = [])
@@ -124,7 +123,7 @@ use Throwable;
  * @method static mixed logCriticalAndReturn(mixed $value, string $message, array $context = [])
  * @method static mixed logAlertAndReturn(mixed $value, string $message, array $context = [])
  * @method static mixed logEmergencyAndReturn(mixed $value, string $message, array $context = [])
- * 
+ *
  * Log with timer methods (execute callback and log duration):
  * @method mixed logDebugWithTimer(Closure $callback, string $description)
  * @method mixed logInfoWithTimer(Closure $callback, string $description)
@@ -134,7 +133,7 @@ use Throwable;
  * @method mixed logCriticalWithTimer(Closure $callback, string $description)
  * @method mixed logAlertWithTimer(Closure $callback, string $description)
  * @method mixed logEmergencyWithTimer(Closure $callback, string $description)
- * 
+ *
  * Static log with timer methods:
  * @method static mixed logDebugWithTimer(Closure $callback, string $description)
  * @method static mixed logInfoWithTimer(Closure $callback, string $description)
@@ -152,13 +151,13 @@ trait ErrorLog {
      * PSR-LogLevel für magische Methoden
      */
     private static array $logLevelMap = [
-        'Debug'     => LogLevel::DEBUG,
-        'Info'      => LogLevel::INFO,
-        'Notice'    => LogLevel::NOTICE,
-        'Warning'   => LogLevel::WARNING,
-        'Error'     => LogLevel::ERROR,
-        'Critical'  => LogLevel::CRITICAL,
-        'Alert'     => LogLevel::ALERT,
+        'Debug' => LogLevel::DEBUG,
+        'Info' => LogLevel::INFO,
+        'Notice' => LogLevel::NOTICE,
+        'Warning' => LogLevel::WARNING,
+        'Error' => LogLevel::ERROR,
+        'Critical' => LogLevel::CRITICAL,
+        'Alert' => LogLevel::ALERT,
         'Emergency' => LogLevel::EMERGENCY,
     ];
 
@@ -242,14 +241,14 @@ trait ErrorLog {
     private static function getSyslogLevel(string $level): int {
         return match ($level) {
             LogLevel::EMERGENCY => LOG_EMERG,
-            LogLevel::ALERT     => LOG_ALERT,
-            LogLevel::CRITICAL  => LOG_CRIT,
-            LogLevel::ERROR     => LOG_ERR,
-            LogLevel::WARNING   => LOG_WARNING,
-            LogLevel::NOTICE    => LOG_NOTICE,
-            LogLevel::INFO      => LOG_INFO,
-            LogLevel::DEBUG     => LOG_DEBUG,
-            default             => LOG_INFO,
+            LogLevel::ALERT => LOG_ALERT,
+            LogLevel::CRITICAL => LOG_CRIT,
+            LogLevel::ERROR => LOG_ERR,
+            LogLevel::WARNING => LOG_WARNING,
+            LogLevel::NOTICE => LOG_NOTICE,
+            LogLevel::INFO => LOG_INFO,
+            LogLevel::DEBUG => LOG_DEBUG,
+            default => LOG_INFO,
         };
     }
 
@@ -259,7 +258,7 @@ trait ErrorLog {
 
     /**
      * Loggt eine Throwable/Exception mit vollständigem Stack-Trace
-     * 
+     *
      * @param Throwable $exception Die zu loggende Exception
      * @param string $level Das Log-Level (Standard: ERROR)
      * @param array $context Zusätzlicher Kontext
@@ -301,7 +300,7 @@ trait ErrorLog {
     /**
      * Erstellt einen Kontext mit automatisch erfassten Debug-Informationen.
      * Ermittelt automatisch den ersten externen Caller außerhalb des Traits.
-     * 
+     *
      * @param array $additionalContext Zusätzlicher Kontext
      * @return array Der erweiterte Kontext
      */
@@ -323,7 +322,7 @@ trait ErrorLog {
 
     /**
      * Interpoliert PSR-3 Platzhalter in der Nachricht mit Kontext-Werten
-     * 
+     *
      * @param string $message Die Nachricht mit {placeholder} Platzhaltern
      * @param array $context Der Kontext mit Ersetzungswerten
      * @return string Die interpolierte Nachricht
@@ -348,8 +347,8 @@ trait ErrorLog {
      * Suffix-Map für Magic-Method-Typen
      */
     private static array $methodSuffixMap = [
-        'If'        => ['length' => 2, 'type' => 'if'],
-        'Unless'    => ['length' => 6, 'type' => 'unless'],
+        'If' => ['length' => 2, 'type' => 'if'],
+        'Unless' => ['length' => 6, 'type' => 'unless'],
         'AndReturn' => ['length' => 9, 'type' => 'andReturn'],
         'WithTimer' => ['length' => 9, 'type' => 'withTimer'],
     ];
@@ -357,7 +356,7 @@ trait ErrorLog {
     /**
      * Parst den Methodennamen und gibt das Log-Level sowie den Methodentyp zurück.
      * Unterstützt: log{Level}, log{Level}If, log{Level}Unless, log{Level}AndReturn, log{Level}WithTimer
-     * 
+     *
      * @return array{level: string, type: string}|null Das PSR-3 Log-Level und der Typ oder null
      */
     private static function parseMethodName(string $name): ?array {
@@ -390,7 +389,7 @@ trait ErrorLog {
 
     /**
      * Magische Methode für Instanzmethoden (nicht-statisch)
-     * 
+     *
      * Unterstützt: log{Level}, log{Level}If, log{Level}Unless, log{Level}AndReturn, log{Level}WithTimer
      */
     public function __call(string $name, array $arguments): mixed {
@@ -399,7 +398,7 @@ trait ErrorLog {
 
     /**
      * Magische Methode für statische Methoden
-     * 
+     *
      * Unterstützt: log{Level}, log{Level}If, log{Level}Unless, log{Level}AndReturn, log{Level}WithTimer
      */
     public static function __callStatic(string $name, array $arguments): mixed {
@@ -432,7 +431,7 @@ trait ErrorLog {
      * Verarbeitet log{Level}Hex() Aufrufe.
      */
     private static function handleHexLog(string $level, array $arguments): null {
-        $message = (string)($arguments[0] ?? '');
+        $message = (string) ($arguments[0] ?? '');
         $context = $arguments[1] ?? [];
 
         if (!is_array($context)) {
@@ -515,7 +514,7 @@ trait ErrorLog {
 
     /**
      * Gemeinsame Implementierung für alle logAndThrow-Methoden
-     * 
+     *
      * @template T of Throwable
      * @param string $level PSR-3 Log-Level
      * @param class-string<T> $exceptionClass
@@ -528,7 +527,7 @@ trait ErrorLog {
 
     /**
      * Loggt eine Error-Nachricht und wirft eine Exception.
-     * 
+     *
      * @template T of Throwable
      * @param class-string<T> $exceptionClass
      * @throws T
@@ -539,7 +538,7 @@ trait ErrorLog {
 
     /**
      * Loggt eine Critical-Nachricht und wirft eine Exception.
-     * 
+     *
      * @template T of Throwable
      * @param class-string<T> $exceptionClass
      * @throws T
@@ -550,7 +549,7 @@ trait ErrorLog {
 
     /**
      * Loggt eine Alert-Nachricht und wirft eine Exception.
-     * 
+     *
      * @template T of Throwable
      * @param class-string<T> $exceptionClass
      * @throws T
@@ -561,7 +560,7 @@ trait ErrorLog {
 
     /**
      * Loggt eine Emergency-Nachricht und wirft eine Exception.
-     * 
+     *
      * @template T of Throwable
      * @param class-string<T> $exceptionClass
      * @throws T

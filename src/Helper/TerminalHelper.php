@@ -42,7 +42,7 @@ class TerminalHelper {
             'VSCODE_CWD',
             'VSCODE_IPC_HOOK',
             'VSCODE_IPC_HOOK_CLI',
-            'TERM_PROGRAM'
+            'TERM_PROGRAM',
         ];
 
         foreach ($vscodeIndicators as $indicator) {
@@ -61,7 +61,7 @@ class TerminalHelper {
         $debugIndicators = [
             'XDEBUG_SESSION',
             'XDEBUG_SESSION_START',
-            'PHP_IDE_CONFIG'
+            'PHP_IDE_CONFIG',
         ];
 
         foreach ($debugIndicators as $indicator) {
@@ -126,7 +126,7 @@ class TerminalHelper {
             system("stty '$ttyProps' 2>/dev/null");
 
             if ($buf !== '' && preg_match('/^\033\[(\d+);(\d+)R$/', $buf, $matches)) {
-                return (int)$matches[2];
+                return (int) $matches[2];
             }
 
             return 0;
@@ -134,9 +134,8 @@ class TerminalHelper {
             if (isset($tty) && is_resource($tty)) {
                 fclose($tty);
             }
-            if (!empty($ttyProps)) {
-                system("stty '$ttyProps' 2>/dev/null");
-            }
+            // $ttyProps ist hier garantiert gesetzt und nicht leer (siehe early-return oben)
+            system("stty '$ttyProps' 2>/dev/null");
             return 0;
         }
     }
@@ -182,21 +181,21 @@ class TerminalHelper {
         // Umgebungsvariable prüfen
         $columns = OsHelper::getEnv('COLUMNS');
         if ($columns !== null && is_numeric($columns)) {
-            return (int)$columns;
+            return (int) $columns;
         }
 
         // System-spezifische Befehle
         if (OsHelper::isWindows()) {
             $output = shell_exec('mode con | findstr "Columns"');
             if ($output && preg_match('/Columns:\s*(\d+)/', $output, $matches)) {
-                return (int)$matches[1];
+                return (int) $matches[1];
             }
         } else {
             // Unix: tput verwenden
             if (OsHelper::findExecutable('tput')) {
                 $width = shell_exec('tput cols 2>/dev/null');
                 if ($width && is_numeric(trim($width))) {
-                    return (int)trim($width);
+                    return (int) trim($width);
                 }
             }
 
@@ -204,7 +203,7 @@ class TerminalHelper {
             if (OsHelper::findExecutable('stty')) {
                 $output = shell_exec('stty size 2>/dev/null');
                 if ($output && preg_match('/\d+\s+(\d+)/', trim($output), $matches)) {
-                    return (int)$matches[1];
+                    return (int) $matches[1];
                 }
             }
         }
@@ -223,21 +222,21 @@ class TerminalHelper {
         // Umgebungsvariable prüfen
         $lines = OsHelper::getEnv('LINES');
         if ($lines !== null && is_numeric($lines)) {
-            return (int)$lines;
+            return (int) $lines;
         }
 
         // System-spezifische Befehle
         if (OsHelper::isWindows()) {
             $output = shell_exec('mode con | findstr "Lines"');
             if ($output && preg_match('/Lines:\s*(\d+)/', $output, $matches)) {
-                return (int)$matches[1];
+                return (int) $matches[1];
             }
         } else {
             // Unix: tput verwenden
             if (OsHelper::findExecutable('tput')) {
                 $height = shell_exec('tput lines 2>/dev/null');
                 if ($height && is_numeric(trim($height))) {
-                    return (int)trim($height);
+                    return (int) trim($height);
                 }
             }
 
@@ -245,7 +244,7 @@ class TerminalHelper {
             if (OsHelper::findExecutable('stty')) {
                 $output = shell_exec('stty size 2>/dev/null');
                 if ($output && preg_match('/(\d+)\s+\d+/', trim($output), $matches)) {
-                    return (int)$matches[1];
+                    return (int) $matches[1];
                 }
             }
         }

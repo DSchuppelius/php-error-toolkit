@@ -12,9 +12,9 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use PHPUnit\Framework\TestCase;
-use ERRORToolkit\LoggerRegistry;
 use ERRORToolkit\Logger\ConsoleLogger;
+use ERRORToolkit\LoggerRegistry;
+use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 
 class LoggerRegistryTest extends TestCase {
@@ -26,21 +26,21 @@ class LoggerRegistryTest extends TestCase {
         LoggerRegistry::resetLogger();
     }
 
-    public function testInitialStateIsNull(): void {
+    public function test_initial_state_is_null(): void {
         $this->assertNull(LoggerRegistry::getLogger());
         $this->assertFalse(LoggerRegistry::hasLogger());
     }
 
-    public function testSetAndGetLogger(): void {
-        $logger = new NullLogger();
+    public function test_set_and_get_logger(): void {
+        $logger = new NullLogger;
         LoggerRegistry::setLogger($logger);
 
         $this->assertSame($logger, LoggerRegistry::getLogger());
         $this->assertTrue(LoggerRegistry::hasLogger());
     }
 
-    public function testResetLogger(): void {
-        LoggerRegistry::setLogger(new NullLogger());
+    public function test_reset_logger(): void {
+        LoggerRegistry::setLogger(new NullLogger);
         $this->assertTrue(LoggerRegistry::hasLogger());
 
         LoggerRegistry::resetLogger();
@@ -48,9 +48,9 @@ class LoggerRegistryTest extends TestCase {
         $this->assertFalse(LoggerRegistry::hasLogger());
     }
 
-    public function testOverwriteLogger(): void {
-        $first = new NullLogger();
-        $second = new ConsoleLogger();
+    public function test_overwrite_logger(): void {
+        $first = new NullLogger;
+        $second = new ConsoleLogger;
 
         LoggerRegistry::setLogger($first);
         $this->assertSame($first, LoggerRegistry::getLogger());

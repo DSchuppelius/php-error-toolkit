@@ -12,22 +12,22 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use PHPUnit\Framework\TestCase;
 use ERRORToolkit\Helper\PhpUnitHelper;
+use PHPUnit\Framework\TestCase;
 
 class PhpUnitHelperTest extends TestCase {
-    public function testIsRunningInPhpunit() {
+    public function test_is_running_in_phpunit() {
         // Während wir PHPUnit Tests ausführen, sollte dies true zurückgeben
         $result = PhpUnitHelper::isRunningInPhpunit();
         $this->assertTrue($result, 'Should detect we are running in PHPUnit');
     }
 
-    public function testSupportsColors() {
+    public function test_supports_colors() {
         $result = PhpUnitHelper::supportsColors();
         $this->assertIsBool($result, 'supportsColors should return a boolean');
     }
 
-    public function testSupportsColorsWithNeverArgument() {
+    public function test_supports_colors_with_never_argument() {
         // Simuliere --colors=never Argument
         $originalArgv = $_SERVER['argv'] ?? null;
         $_SERVER['argv'] = ['phpunit', '--colors=never'];
@@ -43,7 +43,7 @@ class PhpUnitHelperTest extends TestCase {
         }
     }
 
-    public function testSupportsColorsWithAlwaysArgument() {
+    public function test_supports_colors_with_always_argument() {
         // Simuliere --colors=always Argument
         $originalArgv = $_SERVER['argv'] ?? null;
         $_SERVER['argv'] = ['phpunit', '--colors=always'];

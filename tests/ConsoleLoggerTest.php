@@ -12,13 +12,12 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use PHPUnit\Framework\TestCase;
 use ERRORToolkit\Contracts\Abstracts\LoggerAbstract;
 use ERRORToolkit\Logger\ConsoleLogger;
+use PHPUnit\Framework\TestCase;
 use Psr\Log\LogLevel;
 
 class ConsoleLoggerTest extends TestCase {
-
     /** @return resource */
     private static function createStream() {
         return fopen('php://memory', 'r+');
@@ -29,7 +28,7 @@ class ConsoleLoggerTest extends TestCase {
         return stream_get_contents($stream) ?: '';
     }
 
-    public function testLogsInfoLevel() {
+    public function test_logs_info_level() {
         $stream = self::createStream();
         $logger = new ConsoleLogger(LogLevel::INFO, stream: $stream);
 
@@ -63,7 +62,7 @@ class ConsoleLoggerTest extends TestCase {
         }
     }
 
-    public function testDoesNotLogBelowThreshold() {
+    public function test_does_not_log_below_threshold() {
         $stream = self::createStream();
         $logger = new ConsoleLogger(LogLevel::WARNING, enableDeduplication: false, stream: $stream);
 
@@ -73,7 +72,7 @@ class ConsoleLoggerTest extends TestCase {
         $this->assertSame("", $output, "Es sollte keine Ausgabe geben, da INFO unterhalb der WARNING-Schwelle liegt.");
     }
 
-    public function testLogsCriticalLevel() {
+    public function test_logs_critical_level() {
         $stream = self::createStream();
         $logger = new ConsoleLogger(LogLevel::DEBUG, enableDeduplication: false, stream: $stream);
 
@@ -93,7 +92,7 @@ class ConsoleLoggerTest extends TestCase {
         }
     }
 
-    public function testLogsWithoutColorsWhenNotSupported() {
+    public function test_logs_without_colors_when_not_supported() {
         $stream = self::createStream();
         $logger = new ConsoleLogger(LogLevel::INFO, enableDeduplication: false, stream: $stream);
 
@@ -103,7 +102,7 @@ class ConsoleLoggerTest extends TestCase {
         $this->assertStringContainsString("Plain text message", $output);
     }
 
-    public function testDeduplicationPreventsDuplicateLogs() {
+    public function test_deduplication_prevents_duplicate_logs() {
         $stream = self::createStream();
         $logger = new ConsoleLogger(LogLevel::INFO, enableDeduplication: true, stream: $stream);
 
@@ -121,7 +120,7 @@ class ConsoleLoggerTest extends TestCase {
         $this->assertSame(1, substr_count($output, "Duplicate message"));
     }
 
-    public function testDeduplicationAllowsDifferentMessages() {
+    public function test_deduplication_allows_different_messages() {
         $stream = self::createStream();
         $logger = new ConsoleLogger(LogLevel::INFO, enableDeduplication: true, stream: $stream);
 
@@ -138,7 +137,7 @@ class ConsoleLoggerTest extends TestCase {
         $this->assertStringNotContainsString("(x", $output);
     }
 
-    public function testDeduplicationCanBeDisabled() {
+    public function test_deduplication_can_be_disabled() {
         $stream = self::createStream();
         $logger = new ConsoleLogger(LogLevel::INFO, enableDeduplication: false, stream: $stream);
         $this->assertFalse($logger->isDeduplicationEnabled());
@@ -153,7 +152,7 @@ class ConsoleLoggerTest extends TestCase {
         $this->assertStringNotContainsString("(x", $output);
     }
 
-    public function testSetDeduplicationFlushesOnDisable() {
+    public function test_set_deduplication_flushes_on_disable() {
         $stream = self::createStream();
         $logger = new ConsoleLogger(LogLevel::INFO, enableDeduplication: true, stream: $stream);
 
@@ -167,7 +166,7 @@ class ConsoleLoggerTest extends TestCase {
         $this->assertStringContainsString("Repeated (x3)", $output);
     }
 
-    public function testIsDeduplicationEnabled() {
+    public function test_is_deduplication_enabled() {
         $logger = new ConsoleLogger(LogLevel::INFO, enableDeduplication: true);
         $this->assertTrue($logger->isDeduplicationEnabled());
 
@@ -175,7 +174,7 @@ class ConsoleLoggerTest extends TestCase {
         $this->assertFalse($logger->isDeduplicationEnabled());
     }
 
-    public function testCanLogMessageWithHexSuffix(): void {
+    public function test_can_log_message_with_hex_suffix(): void {
         $stream = self::createStream();
         $logger = new ConsoleLogger(LogLevel::DEBUG, enableDeduplication: false, stream: $stream);
 

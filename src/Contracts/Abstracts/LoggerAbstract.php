@@ -12,9 +12,8 @@ declare(strict_types=1);
 
 namespace ERRORToolkit\Contracts\Abstracts;
 
-use Psr\Log\LoggerInterface;
-use Psr\Log\LogLevel;
 use InvalidArgumentException;
+use Psr\Log\{LogLevel, LoggerInterface};
 use Stringable;
 
 abstract class LoggerAbstract implements LoggerInterface {
@@ -46,7 +45,7 @@ abstract class LoggerAbstract implements LoggerInterface {
 
     /**
      * Aktiviert oder deaktiviert die Deduplizierung von Log-Einträgen.
-     * 
+     *
      * @param bool $enabled True um Deduplizierung zu aktivieren
      */
     public function setDeduplication(bool $enabled): void {
@@ -108,7 +107,7 @@ abstract class LoggerAbstract implements LoggerInterface {
             $encoded = json_encode($context, JSON_UNESCAPED_UNICODE);
             $contextKey = $encoded !== false ? $encoded : 'unserializable:' . json_last_error_msg();
         }
-        return $level . '|' . (string)$message . '|' . $contextKey;
+        return $level . '|' . (string) $message . '|' . $contextKey;
     }
 
     public function setLogLevel(string $logLevel): void {
@@ -118,13 +117,13 @@ abstract class LoggerAbstract implements LoggerInterface {
     private static function convertLogLevel(string $logLevel): int {
         static $levels = [
             LogLevel::EMERGENCY => 0,
-            LogLevel::ALERT     => 1,
-            LogLevel::CRITICAL  => 2,
-            LogLevel::ERROR     => 3,
-            LogLevel::WARNING   => 4,
-            LogLevel::NOTICE    => 5,
-            LogLevel::INFO      => 6,
-            LogLevel::DEBUG     => 7,
+            LogLevel::ALERT => 1,
+            LogLevel::CRITICAL => 2,
+            LogLevel::ERROR => 3,
+            LogLevel::WARNING => 4,
+            LogLevel::NOTICE => 5,
+            LogLevel::INFO => 6,
+            LogLevel::DEBUG => 7,
         ];
 
         return $levels[$logLevel] ?? throw new InvalidArgumentException("Ungültiges LogLevel: {$logLevel}");
@@ -171,11 +170,11 @@ abstract class LoggerAbstract implements LoggerInterface {
      * Ermittelt den ersten externen Caller außerhalb des ERRORToolkit.
      * Überspringt alle internen Trait/Logger-Methoden im Backtrace.
      * Funktioniert auch bei Script-Aufrufen ohne Klassen-Kontext.
-     * 
+     *
      * Bei Backtraces gilt:
      * - file/line zeigt WO die Funktion aufgerufen wurde
      * - function/class zeigt WELCHE Funktion aufgerufen wurde
-     * 
+     *
      * @param int $additionalSkip Zusätzliche Frames, die übersprungen werden sollen
      * @return array{file: string, line: int, function: string, class: string|null}
      */
@@ -194,7 +193,7 @@ abstract class LoggerAbstract implements LoggerInterface {
         // ist der echte Caller der logInfo() etc. aufgerufen hat.
 
         foreach ($backtrace as $index => $frame) {
-            $function = $frame['function'] ?? '';
+            $function = $frame['function'];
             $class = $frame['class'] ?? null;
 
             // Überspringe interne Methoden
@@ -231,7 +230,7 @@ abstract class LoggerAbstract implements LoggerInterface {
 
     /**
      * Formatiert die Caller-Information als String für Log-Einträge.
-     * 
+     *
      * @param bool $includeFileInfo Ob Datei und Zeilennummer inkludiert werden sollen
      * @return string Formatierter Caller-String
      */
@@ -250,7 +249,6 @@ abstract class LoggerAbstract implements LoggerInterface {
 
         return $result;
     }
-
 
     protected function shouldLog(string $level): bool {
         return self::convertLogLevel($level) <= $this->logLevel;
@@ -279,7 +277,7 @@ abstract class LoggerAbstract implements LoggerInterface {
             // Aktuellen Eintrag als ausstehend speichern
             $this->lastLogKey = $currentKey;
             $this->lastLevel = $level;
-            $this->lastMessage = (string)$message;
+            $this->lastMessage = (string) $message;
             $this->lastContext = $context;
             $this->duplicateCount = 0;
             return;
@@ -295,7 +293,7 @@ abstract class LoggerAbstract implements LoggerInterface {
 
         $timestamp = date('Y-m-d H:i:s');
         $caller = self::getCallerFunction($this->logLevel === 7);
-        $messageString = (string)$message;
+        $messageString = (string) $message;
         $contextString = empty($context) ? '' : ' ' . json_encode($context);
 
         if (!$includeMessageHex) {
@@ -317,7 +315,7 @@ abstract class LoggerAbstract implements LoggerInterface {
      * @return array{0: array, 1: bool}
      */
     protected function extractInternalContextFlags(array $context): array {
-        $includeMessageHex = (bool)($context[self::CONTEXT_KEY_MESSAGE_HEX] ?? false);
+        $includeMessageHex = (bool) ($context[self::CONTEXT_KEY_MESSAGE_HEX] ?? false);
         unset($context[self::CONTEXT_KEY_MESSAGE_HEX]);
 
         return [$context, $includeMessageHex];
@@ -351,25 +349,25 @@ abstract class LoggerAbstract implements LoggerInterface {
         }
 
         $chars = preg_split('//u', $value, -1, PREG_SPLIT_NO_EMPTY);
-        if ($chars === false || count($chars) === 0) {
+        if ($chars === false) {
             return [$value, ''];
         }
 
         $charCells = [];
-        $hexCells  = [];
+        $hexCells = [];
 
         foreach ($chars as $char) {
-            $hexBytes     = strtoupper(bin2hex($char));
+            $hexBytes = strtoupper(bin2hex($char));
             $hexFormatted = trim(chunk_split($hexBytes, 2, ' ')); // z.B. "41" oder "C3 A4"
 
-            $hexWidth          = strlen($hexFormatted);           // immer ASCII
-            $charDisplayWidth  = mb_strlen($char, 'UTF-8');       // visuelle Breite (1 für normale Zeichen)
-            $colWidth          = max($charDisplayWidth, $hexWidth);
+            $hexWidth = strlen($hexFormatted);           // immer ASCII
+            $charDisplayWidth = mb_strlen($char, 'UTF-8');       // visuelle Breite (1 für normale Zeichen)
+            $colWidth = max($charDisplayWidth, $hexWidth);
 
             // Zeichen visuell auffüllen (multi-byte-sicher: Leerzeichen manuell anhängen)
             $charCells[] = $char . str_repeat(' ', $colWidth - $charDisplayWidth);
             // Hex auffüllen (alles ASCII, str_pad reicht)
-            $hexCells[]  = str_pad($hexFormatted, $colWidth);
+            $hexCells[] = str_pad($hexFormatted, $colWidth);
         }
 
         return [
@@ -377,7 +375,6 @@ abstract class LoggerAbstract implements LoggerInterface {
             implode(' ', $hexCells),
         ];
     }
-
 
     abstract protected function writeLog(string $logEntry, string $level): void;
 
