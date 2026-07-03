@@ -211,16 +211,21 @@ trait ErrorLog {
 
     /**
      * Allgemeine Logging-Funktion für Instanz- und statische Nutzung
+     *
+     * Der Registry-Logger wird bewusst NICHT in self::$logger persistiert:
+     * die Registry cached selbst, und ein hier eingefrorener Logger würde
+     * einen späteren Registry-Wechsel (z. B. neue Framework-App-Instanz im
+     * selben Prozess: PHPUnit, Octane, Queue-Worker) überleben und gegen den
+     * toten Container loggen. Nur ein explizit via setLogger() gesetzter
+     * Logger bleibt in self::$logger bestehen.
      */
     private static function logInternal(string $level, string $message, array $context = []): void {
         $message = LoggerAbstract::interpolate($message, $context);
 
-        if (is_null(self::$logger)) {
-            self::$logger = LoggerRegistry::getLogger();
-        }
+        $logger = self::$logger ?? LoggerRegistry::getLogger();
 
-        if (self::$logger) {
-            self::$logger->log($level, $message, $context);
+        if ($logger) {
+            $logger->log($level, $message, $context);
         } else {
             self::logFallback($level, $message);
         }

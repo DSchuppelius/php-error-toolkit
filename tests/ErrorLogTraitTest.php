@@ -37,6 +37,14 @@ class ErrorLogFallbackTestClass {
     use ErrorLog;
 }
 
+/**
+ * Eigene Fixture für Registry-Wechsel-Tests: Der Trait-Logger dieser Klasse
+ * wird nie explizit gesetzt, damit logInternal() immer über die Registry geht.
+ */
+class ErrorLogRegistrySwitchTestClass {
+    use ErrorLog;
+}
+
 class ErrorLogTraitTest extends TestCase {
     private ErrorLogTestClass $testInstance;
 
@@ -937,5 +945,35 @@ class ErrorLogTraitTest extends TestCase {
         // Die Quelle des Log-Aufrufs muss auch im Fallback sichtbar sein
         $this->assertStringContainsString(self::class . '::' . __FUNCTION__ . '()', $output);
         $this->assertStringContainsString(basename(__FILE__), $output);
+    }
+
+    /**
+     * Test: Ein Registry-Wechsel (neue Framework-App-Instanz im selben
+     * Prozess: PHPUnit-Feature-Tests, Octane, Queue-Worker) muss beim
+     * nächsten Log-Aufruf greifen — der Trait darf den zuvor über die
+     * Registry aufgelösten Logger nicht statisch einfrieren.
+     */
+    public function test_registry_logger_switch_is_picked_up_without_stale_cache(): void {
+        $streamA = fopen('php://memory', 'r+');
+        $streamB = fopen('php://memory', 'r+');
+        $this->assertNotFalse($streamA);
+        $this->assertNotFalse($streamB);
+
+        LoggerRegistry::resetLogger();
+        LoggerRegistry::setLogger(new ConsoleLogger(LogLevel::DEBUG, enableDeduplication: false, stream: $streamA));
+        ErrorLogRegistrySwitchTestClass::logInfo('first message');
+
+        LoggerRegistry::resetLogger();
+        LoggerRegistry::setLogger(new ConsoleLogger(LogLevel::DEBUG, enableDeduplication: false, stream: $streamB));
+        ErrorLogRegistrySwitchTestClass::logInfo('second message');
+
+        rewind($streamA);
+        rewind($streamB);
+        $outputA = (string) stream_get_contents($streamA);
+        $outputB = (string) stream_get_contents($streamB);
+
+        $this->assertStringContainsString('first message', $outputA);
+        $this->assertStringNotContainsString('second message', $outputA);
+        $this->assertStringContainsString('second message', $outputB);
     }
 }
