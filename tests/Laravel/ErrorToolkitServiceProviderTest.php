@@ -100,6 +100,24 @@ class ErrorToolkitServiceProviderTest extends TestCase {
         $this->assertSame($this->channelLogger, $resolved);
     }
 
+    public function test_boot_on_new_app_instance_discards_stale_cached_logger(): void {
+        $first = new ErrorToolkitServiceProvider($this->makeApp(null));
+        $first->register();
+        $first->boot();
+        $staleLogger = LoggerRegistry::getLogger(); // statically cached for app #1
+
+        // A second app instance in the same PHP process (next feature test,
+        // Octane worker) boots the provider again — the logger cached for the
+        // dead first app must not survive.
+        $second = new ErrorToolkitServiceProvider($this->makeApp(null));
+        $second->register();
+        $second->boot();
+
+        $fresh = LoggerRegistry::getLogger();
+        $this->assertNotNull($fresh);
+        $this->assertNotSame($staleLogger, $fresh, 'boot() must invalidate the logger cached for a previous app instance');
+    }
+
     public function test_explicitly_set_logger_wins_over_bridge(): void {
         $explicit = new NullLogger;
 

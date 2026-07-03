@@ -39,6 +39,15 @@ class ErrorToolkitServiceProvider extends ServiceProvider {
             __DIR__ . '/../../config/error-toolkit.php' => $this->app->basePath('config/error-toolkit.php'),
         ], 'error-toolkit-config');
 
+        // The registry caches the resolved logger in a static property that
+        // outlives the application instance (same PHP process, new app: every
+        // PHPUnit feature test, Octane worker, queue restart). A logger
+        // resolved for a previous, already-flushed app would keep resolving
+        // config/channels against that dead container ("Target class [config]
+        // does not exist"). Booting on a fresh app therefore discards any
+        // previously cached logger/resolver before registering its own.
+        LoggerRegistry::resetLogger();
+
         LoggerRegistry::setLoggerResolver(function (): ?LoggerInterface {
             $log = $this->app->make('log');
 
