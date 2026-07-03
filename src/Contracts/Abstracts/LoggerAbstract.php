@@ -155,6 +155,7 @@ abstract class LoggerAbstract implements LoggerInterface {
     protected const INTERNAL_METHODS = [
         // ErrorLog Trait Methoden
         'logInternal',
+        'logFallback',
         'handleMagicCall',
         'handleConditionalLog',
         'handleLogAndReturn',

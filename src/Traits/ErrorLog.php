@@ -222,18 +222,39 @@ trait ErrorLog {
         if (self::$logger) {
             self::$logger->log($level, $message, $context);
         } else {
-            // Fallback-Logging
-            $logString = sprintf("[%s] [%s] %s", date('Y-m-d H:i:s'), ucfirst($level), $message);
+            self::logFallback($level, $message);
+        }
+    }
 
-            if (ini_get('error_log')) {
-                error_log($logString);
-            } elseif (function_exists('syslog')) {
-                openlog(self::detectProjectName(), LOG_PID | LOG_PERROR, defined('LOG_LOCAL0') ? LOG_LOCAL0 : LOG_USER);
-                syslog(self::getSyslogLevel($level), $logString);
-                closelog();
-            } else {
-                file_put_contents(sys_get_temp_dir() . "/php-error-toolkit.log", $logString . PHP_EOL, FILE_APPEND | LOCK_EX);
-            }
+    /**
+     * Fallback-Logging, wenn kein Logger registriert ist.
+     *
+     * Enthält wie die echten Logger den Caller, damit die Quelle des Eintrags
+     * sichtbar bleibt. Im CLI wird direkt eine atomare Zeile nach STDERR
+     * geschrieben; syslog nur noch ohne LOG_PERROR, denn dessen ungepuffertes
+     * stderr-Echo verschränkt sich mit stdout (z. B. PHPUnit in CI) und
+     * zerschreibt Log-Zeilen.
+     */
+    private static function logFallback(string $level, string $message): void {
+        $caller = LoggerAbstract::getExternalCaller();
+        $callerString = $caller['class'] !== null ? "{$caller['class']}::{$caller['function']}()" : $caller['function'];
+
+        if ($caller['file'] !== 'unknown') {
+            $callerString .= " in {$caller['file']}:{$caller['line']}";
+        }
+
+        $logString = sprintf('[%s] [%s] [%s]: %s', date('Y-m-d H:i:s'), ucfirst($level), $callerString, $message);
+
+        if (ini_get('error_log')) {
+            error_log($logString);
+        } elseif (PHP_SAPI === 'cli' && defined('STDERR')) {
+            fwrite(STDERR, $logString . PHP_EOL);
+        } elseif (function_exists('syslog')) {
+            openlog(self::detectProjectName(), LOG_PID, defined('LOG_LOCAL0') ? LOG_LOCAL0 : LOG_USER);
+            syslog(self::getSyslogLevel($level), $logString);
+            closelog();
+        } else {
+            file_put_contents(sys_get_temp_dir() . '/php-error-toolkit.log', $logString . PHP_EOL, FILE_APPEND | LOCK_EX);
         }
     }
 

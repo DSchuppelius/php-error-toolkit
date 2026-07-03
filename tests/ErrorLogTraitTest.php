@@ -29,6 +29,14 @@ class ErrorLogTestClass {
     use ErrorLog;
 }
 
+/**
+ * Eigene Fixture für Fallback-Tests: Der Trait-Logger dieser Klasse wird
+ * nie gesetzt, damit logInternal() in den Fallback-Pfad läuft.
+ */
+class ErrorLogFallbackTestClass {
+    use ErrorLog;
+}
+
 class ErrorLogTraitTest extends TestCase {
     private ErrorLogTestClass $testInstance;
 
@@ -903,5 +911,31 @@ class ErrorLogTraitTest extends TestCase {
         $this->assertGreaterThan(0, $debug['memory_usage']);
         $this->assertGreaterThan(0, $debug['memory_peak']);
         $this->assertIsFloat($debug['timestamp']);
+    }
+
+    /**
+     * Test: Fallback-Logging (kein Logger registriert) enthält Level,
+     * Nachricht und vor allem den Caller samt Datei/Zeile.
+     */
+    public function test_fallback_logging_includes_caller(): void {
+        LoggerRegistry::resetLogger();
+
+        $logFile = tempnam(sys_get_temp_dir(), 'etk_fallback_');
+        $this->assertNotFalse($logFile);
+        ini_set('error_log', $logFile);
+
+        try {
+            ErrorLogFallbackTestClass::logWarning('Fallback caller test');
+            $output = (string) file_get_contents($logFile);
+        } finally {
+            ini_restore('error_log');
+            @unlink($logFile);
+        }
+
+        $this->assertStringContainsString('[Warning]', $output);
+        $this->assertStringContainsString('Fallback caller test', $output);
+        // Die Quelle des Log-Aufrufs muss auch im Fallback sichtbar sein
+        $this->assertStringContainsString(self::class . '::' . __FUNCTION__ . '()', $output);
+        $this->assertStringContainsString(basename(__FILE__), $output);
     }
 }
