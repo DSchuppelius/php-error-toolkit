@@ -15,6 +15,7 @@ namespace ERRORToolkit\Logger;
 use ERRORToolkit\Contracts\Abstracts\LoggerAbstract;
 use ERRORToolkit\Exceptions\FileSystem\FileNotWrittenException;
 use ERRORToolkit\Factories\ConsoleLoggerFactory;
+use InvalidArgumentException;
 use Psr\Log\LogLevel;
 
 class FileLogger extends LoggerAbstract {
@@ -24,8 +25,9 @@ class FileLogger extends LoggerAbstract {
     protected bool $rotateLogs; // ob ein Archiv erstellt werden soll
     protected int $filePermissions; // Berechtigungen für neue Logdateien
     protected bool $writeBom; // ob UTF-8 BOM geschrieben werden soll
+    protected ?int $maxArchiveFiles; // Obergrenze aufbewahrter Archive (null = unbegrenzt)
 
-    public function __construct(?string $logFile = null, string $logLevel = LogLevel::DEBUG, bool $failSafe = true, int $maxFileSize = 5242880, bool $rotateLogs = true, bool $enableDeduplication = true, int $filePermissions = 0660, bool $writeBom = true) {
+    public function __construct(?string $logFile = null, string $logLevel = LogLevel::DEBUG, bool $failSafe = true, int $maxFileSize = 5242880, bool $rotateLogs = true, bool $enableDeduplication = true, int $filePermissions = 0660, bool $writeBom = true, ?int $maxArchiveFiles = 10) {
         parent::__construct($logLevel, $enableDeduplication);
 
         // Standard-Logdatei, falls die gegebene Datei nicht beschreibbar ist
@@ -38,11 +40,12 @@ class FileLogger extends LoggerAbstract {
         $this->rotateLogs = $rotateLogs;
         $this->filePermissions = $filePermissions;
         $this->writeBom = $writeBom;
+        $this->setMaxArchiveFiles($maxArchiveFiles);
 
         $logDir = dirname($logFile);
 
         // Sicherstellen, dass das Verzeichnis existiert
-        if (!is_dir($logDir) && !mkdir($logDir, 0777, true) && !is_dir($logDir)) {
+        if (!is_dir($logDir) && !mkdir($logDir, 0775, true) && !is_dir($logDir)) {
             $this->fallbackToConsole("Logverzeichnis konnte nicht erstellt werden: $logDir");
             throw new FileNotWrittenException("Logverzeichnis konnte nicht erstellt werden: $logDir");
         }
@@ -146,6 +149,8 @@ class FileLogger extends LoggerAbstract {
                 }
                 return;
             }
+
+            $this->purgeOldArchives();
         } else {
             $initialContent = $this->writeBom ? "\xEF\xBB\xBF" : '';
             if (@file_put_contents($this->logFile, $initialContent) === false) {
@@ -158,6 +163,50 @@ class FileLogger extends LoggerAbstract {
             $initialContent = $this->writeBom ? "\xEF\xBB\xBF" : '';
             @file_put_contents($this->logFile, $initialContent);
             @chmod($this->logFile, $this->filePermissions);
+        }
+    }
+
+    public function getMaxArchiveFiles(): ?int {
+        return $this->maxArchiveFiles;
+    }
+
+    /**
+     * Obergrenze der aufbewahrten Rotations-Archive (null = unbegrenzt).
+     */
+    public function setMaxArchiveFiles(?int $maxArchiveFiles): void {
+        if ($maxArchiveFiles !== null && $maxArchiveFiles < 1) {
+            throw new InvalidArgumentException('maxArchiveFiles muss mindestens 1 sein (oder null für unbegrenzt).');
+        }
+        $this->maxArchiveFiles = $maxArchiveFiles;
+    }
+
+    /**
+     * Entfernt die ältesten Rotations-Archive über dem konfigurierten Limit,
+     * damit die Rotation den Datenträger nicht unbegrenzt füllt.
+     */
+    private function purgeOldArchives(): void {
+        if ($this->maxArchiveFiles === null) {
+            return;
+        }
+
+        $archives = glob($this->logFile . '.*');
+        if ($archives === false) {
+            return;
+        }
+
+        $archives = array_values(array_filter(
+            $archives,
+            fn (string $file): bool => preg_match('/\.\d{8}_\d{6}$/', $file) === 1
+        ));
+
+        if (count($archives) <= $this->maxArchiveFiles) {
+            return;
+        }
+
+        sort($archives); // Zeitstempel-Suffix sortiert chronologisch
+
+        foreach (array_slice($archives, 0, count($archives) - $this->maxArchiveFiles) as $oldArchive) {
+            @unlink($oldArchive);
         }
     }
 

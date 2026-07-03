@@ -15,6 +15,7 @@ namespace ERRORToolkit\Logger;
 use ERRORToolkit\Contracts\Abstracts\LoggerAbstract;
 use ERRORToolkit\Helper\TerminalHelper;
 use Psr\Log\LogLevel;
+use RuntimeException;
 
 class ConsoleLogger extends LoggerAbstract {
     private const LEVEL_COLORS = [
@@ -38,7 +39,17 @@ class ConsoleLogger extends LoggerAbstract {
      */
     public function __construct(string $logLevel = LogLevel::DEBUG, bool $enableDeduplication = true, $stream = null) {
         parent::__construct($logLevel, $enableDeduplication);
-        $this->stream = $stream ?? STDERR;
+
+        if ($stream === null) {
+            // STDERR ist nur im CLI-SAPI definiert; unter FPM/Apache stattdessen öffnen
+            $stream = defined('STDERR') ? STDERR : @fopen('php://stderr', 'w');
+        }
+
+        if (!is_resource($stream)) {
+            throw new RuntimeException('Kein beschreibbarer Ausgabestream für den ConsoleLogger verfügbar.');
+        }
+
+        $this->stream = $stream;
     }
 
     protected function writeLog(string $logEntry, string $level): void {

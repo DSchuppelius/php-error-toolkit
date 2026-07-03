@@ -213,6 +213,8 @@ trait ErrorLog {
      * Allgemeine Logging-Funktion für Instanz- und statische Nutzung
      */
     private static function logInternal(string $level, string $message, array $context = []): void {
+        $message = LoggerAbstract::interpolate($message, $context);
+
         if (is_null(self::$logger)) {
             self::$logger = LoggerRegistry::getLogger();
         }
@@ -328,19 +330,7 @@ trait ErrorLog {
      * @return string Die interpolierte Nachricht
      */
     public static function interpolateMessage(string $message, array $context): string {
-        $replace = [];
-        foreach ($context as $key => $val) {
-            if (is_string($key) && !str_starts_with($key, '_')) {
-                if (is_null($val) || is_scalar($val) || (is_object($val) && method_exists($val, '__toString'))) {
-                    $replace['{' . $key . '}'] = (string) $val;
-                } elseif (is_array($val)) {
-                    $replace['{' . $key . '}'] = json_encode($val);
-                } elseif (is_object($val)) {
-                    $replace['{' . $key . '}'] = get_class($val);
-                }
-            }
-        }
-        return strtr($message, $replace);
+        return LoggerAbstract::interpolate($message, $context);
     }
 
     /**

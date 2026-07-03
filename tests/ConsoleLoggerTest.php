@@ -110,14 +110,25 @@ class ConsoleLoggerTest extends TestCase {
         for ($i = 0; $i < 5; $i++) {
             $logger->log(LogLevel::INFO, "Duplicate message");
         }
-        // Flush um den letzten Eintrag auszugeben
+        // Flush um die Wiederholungs-Zusammenfassung auszugeben
         $logger->flushDuplicates();
         $output = self::readStream($stream);
 
-        // Es sollte nur ein Eintrag mit (x5) vorhanden sein
-        $this->assertStringContainsString("Duplicate message (x5)", $output);
-        // Zähle die Anzahl der "Duplicate message" Vorkommen - sollte nur 1 sein
-        $this->assertSame(1, substr_count($output, "Duplicate message"));
+        // Write-Through: erstes Auftreten sofort, danach eine Zusammenfassung
+        // der 4 unterdrückten Wiederholungen
+        $this->assertStringContainsString("Duplicate message (x4)", $output);
+        $this->assertSame(2, substr_count($output, "Duplicate message"));
+    }
+
+    public function test_deduplication_writes_first_occurrence_immediately() {
+        $stream = self::createStream();
+        $logger = new ConsoleLogger(LogLevel::INFO, enableDeduplication: true, stream: $stream);
+
+        $logger->log(LogLevel::INFO, "Instant message");
+        // KEIN Flush: Das erste Auftreten muss ohne Latenz sichtbar sein
+        $output = self::readStream($stream);
+
+        $this->assertStringContainsString("Instant message", $output);
     }
 
     public function test_deduplication_allows_different_messages() {
@@ -159,11 +170,12 @@ class ConsoleLoggerTest extends TestCase {
         $logger->log(LogLevel::INFO, "Repeated");
         $logger->log(LogLevel::INFO, "Repeated");
         $logger->log(LogLevel::INFO, "Repeated");
-        // Deaktiviere Deduplizierung - sollte ausstehende Duplikate flushen
+        // Deaktiviere Deduplizierung - sollte ausstehende Wiederholungen flushen
         $logger->setDeduplication(false);
         $output = self::readStream($stream);
 
-        $this->assertStringContainsString("Repeated (x3)", $output);
+        // Write-Through: erstes Auftreten sofort + Zusammenfassung von 2 Wiederholungen
+        $this->assertStringContainsString("Repeated (x2)", $output);
     }
 
     public function test_is_deduplication_enabled() {

@@ -232,8 +232,21 @@ class ErrorHandler {
 
         if ($this->exitOnException) {
             // @codeCoverageIgnoreStart
+            $this->writeToStderr((string) $exception);
             exit(255);
             // @codeCoverageIgnoreEnd
+        }
+    }
+
+    /**
+     * Schreibt einen Text auf STDERR, damit ein Absturz auch bei
+     * FileLogger-Konfiguration im Terminal sichtbar bleibt.
+     * SAPI-sicher: außerhalb der CLI wird php://stderr geöffnet.
+     */
+    private function writeToStderr(string $text): void {
+        $stream = defined('STDERR') ? STDERR : @fopen('php://stderr', 'w');
+        if (is_resource($stream)) {
+            @fwrite($stream, $text . PHP_EOL);
         }
     }
 
@@ -242,6 +255,13 @@ class ErrorHandler {
      * Fängt fatale Fehler ab (E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR).
      */
     public function handleShutdown(): void {
+        // Nach unregister() nicht mehr reagieren: Shutdown-Funktionen sind in
+        // PHP nicht deregistrierbar; ohne Guard würde eine abgemeldete Instanz
+        // fatale Fehler doppelt behandeln.
+        if (!$this->registered) {
+            return;
+        }
+
         // Memory-Reserve freigeben damit im OOM-Fall noch geloggt werden kann
         $this->freeMemoryReserve();
 

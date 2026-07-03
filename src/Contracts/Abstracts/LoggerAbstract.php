@@ -12,14 +12,18 @@ declare(strict_types=1);
 
 namespace ERRORToolkit\Contracts\Abstracts;
 
-use InvalidArgumentException;
-use Psr\Log\{LogLevel, LoggerInterface};
+use Psr\Log\{InvalidArgumentException, LogLevel, LoggerInterface};
 use Stringable;
 
 abstract class LoggerAbstract implements LoggerInterface {
     public const CONTEXT_KEY_MESSAGE_HEX = '_hexMessage';
 
     protected int $logLevel;
+
+    /**
+     * Caller-Detection (debug_backtrace je Eintrag) — abschaltbar für heiße Pfade.
+     */
+    protected bool $callerDetectionEnabled = true;
 
     /**
      * Deduplizierung: Verhindert doppelte aufeinanderfolgende Log-Einträge.
@@ -64,12 +68,24 @@ abstract class LoggerAbstract implements LoggerInterface {
     }
 
     /**
+     * Aktiviert oder deaktiviert die Caller-Detection (Backtrace je Eintrag).
+     * Für heiße Log-Pfade abschaltbar; der Eintrag zeigt dann "-" als Quelle.
+     */
+    public function setCallerDetection(bool $enabled): void {
+        $this->callerDetectionEnabled = $enabled;
+    }
+
+    public function isCallerDetectionEnabled(): bool {
+        return $this->callerDetectionEnabled;
+    }
+
+    /**
      * Gibt ausstehende Log-Einträge aus.
      * Sollte am Ende einer Log-Session aufgerufen werden.
      */
     public function flushDuplicates(): void {
-        if ($this->lastLogKey !== null && $this->lastLevel !== null && $this->lastMessage !== null) {
-            $this->writePendingEntry();
+        if ($this->duplicateCount > 0) {
+            $this->writeDuplicateSummary();
         }
         $this->resetDeduplicationState();
     }
@@ -86,14 +102,17 @@ abstract class LoggerAbstract implements LoggerInterface {
     }
 
     /**
-     * Schreibt den ausstehenden Eintrag (mit Zähler falls Duplikate vorhanden).
+     * Schreibt die Wiederholungs-Zusammenfassung für den letzten Eintrag.
+     *
+     * Das erste Auftreten wurde bereits geschrieben (Write-Through);
+     * "(xN)" zählt daher nur die unterdrückten Wiederholungen.
      */
-    protected function writePendingEntry(): void {
-        $message = $this->lastMessage;
-        if ($this->duplicateCount > 0) {
-            $count = $this->duplicateCount + 1; // +1 weil das erste Auftreten nicht gezählt wird
-            $message .= " (x{$count})";
+    protected function writeDuplicateSummary(): void {
+        if ($this->lastLevel === null || $this->lastMessage === null) {
+            return;
         }
+
+        $message = $this->lastMessage . " (x{$this->duplicateCount})";
         $logEntry = $this->generateLogEntry($this->lastLevel, $message, $this->lastContext);
         $this->writeLog($logEntry, $this->lastLevel);
     }
@@ -255,35 +274,38 @@ abstract class LoggerAbstract implements LoggerInterface {
     }
 
     public function log($level, string|Stringable $message, array $context = []): void {
+        if (!is_string($level)) {
+            throw new InvalidArgumentException('Log level must be one of the PSR-3 LogLevel strings.');
+        }
+
         if (!$this->shouldLog($level)) {
             return;
         }
 
-        // Deduplizierung: Prüfe ob gleicher Eintrag wie zuvor
+        // Deduplizierung (Write-Through): Das erste Auftreten wird sofort
+        // geschrieben, nur unmittelbare Wiederholungen werden unterdrückt und
+        // beim nächsten anderen Eintrag bzw. Flush als "(xN)" zusammengefasst.
+        // So entsteht keine Ausgabe-Latenz (tail -f, Queue-Worker).
         if ($this->deduplicationEnabled) {
             $currentKey = $this->createLogKey($level, $message, $context);
 
             if ($this->lastLogKey === $currentKey) {
-                // Gleicher Eintrag - nur Zähler erhöhen, nicht loggen
+                // Wiederholung - nur Zähler erhöhen, nicht loggen
                 $this->duplicateCount++;
                 return;
             }
 
-            // Neuer, anderer Eintrag - vorherigen ausstehenden Eintrag ausgeben
-            if ($this->lastLogKey !== null && $this->lastLevel !== null) {
-                $this->writePendingEntry();
-            }
+            // Anderer Eintrag: ggf. Wiederholungs-Zusammenfassung ausgeben
+            $this->flushDuplicates();
 
-            // Aktuellen Eintrag als ausstehend speichern
+            // Aktuellen Eintrag für die Duplikat-Erkennung merken
             $this->lastLogKey = $currentKey;
             $this->lastLevel = $level;
             $this->lastMessage = (string) $message;
             $this->lastContext = $context;
             $this->duplicateCount = 0;
-            return;
         }
 
-        // Ohne Deduplizierung: sofort ausgeben
         $logEntry = $this->generateLogEntry($level, $message, $context);
         $this->writeLog($logEntry, $level);
     }
@@ -292,8 +314,8 @@ abstract class LoggerAbstract implements LoggerInterface {
         [$context, $includeMessageHex] = $this->extractInternalContextFlags($context);
 
         $timestamp = date('Y-m-d H:i:s');
-        $caller = self::getCallerFunction($this->logLevel === 7);
-        $messageString = (string) $message;
+        $caller = $this->callerDetectionEnabled ? self::getCallerFunction($this->logLevel === 7) : '-';
+        $messageString = self::interpolate((string) $message, $context);
         $contextString = empty($context) ? '' : ' ' . json_encode($context);
 
         if (!$includeMessageHex) {
@@ -319,6 +341,32 @@ abstract class LoggerAbstract implements LoggerInterface {
         unset($context[self::CONTEXT_KEY_MESSAGE_HEX]);
 
         return [$context, $includeMessageHex];
+    }
+
+    /**
+     * Interpoliert PSR-3 Platzhalter ({key}) in der Nachricht mit Kontext-Werten.
+     * Kontext-Schlüssel mit "_"-Präfix (interne Flags) werden ignoriert;
+     * ohne Platzhalter ist der Aufruf ein No-op.
+     */
+    public static function interpolate(string $message, array $context): string {
+        if ($context === [] || !str_contains($message, '{')) {
+            return $message;
+        }
+
+        $replace = [];
+        foreach ($context as $key => $val) {
+            if (is_string($key) && !str_starts_with($key, '_')) {
+                if (is_null($val) || is_scalar($val) || (is_object($val) && method_exists($val, '__toString'))) {
+                    $replace['{' . $key . '}'] = (string) $val;
+                } elseif (is_array($val)) {
+                    $replace['{' . $key . '}'] = (string) json_encode($val);
+                } elseif (is_object($val)) {
+                    $replace['{' . $key . '}'] = get_class($val);
+                }
+            }
+        }
+
+        return strtr($message, $replace);
     }
 
     /**
