@@ -120,6 +120,40 @@ class ConsoleLoggerTest extends TestCase {
         $this->assertSame(2, substr_count($output, "Duplicate message"));
     }
 
+    public function test_duplicate_summary_shows_original_caller() {
+        $stream = self::createStream();
+        $logger = new ConsoleLogger(LogLevel::INFO, enableDeduplication: true, stream: $stream);
+
+        $this->logRepeatedMessage($logger);
+        $this->logRepeatedMessage($logger);
+        // Anderer Eintrag aus anderer Methode löst den Summary-Flush aus
+        $this->logFlushTrigger($logger);
+
+        $output = self::readStream($stream);
+
+        $summaryLine = null;
+        foreach (explode("\n", $output) as $line) {
+            if (str_contains($line, '(x1)')) {
+                $summaryLine = $line;
+                break;
+            }
+        }
+
+        $this->assertNotNull($summaryLine, "Keine (x1)-Summary gefunden: {$output}");
+        // Die Summary muss den Caller des ersten Auftretens zeigen,
+        // nicht den Auslöser des Flush
+        $this->assertStringContainsString('logRepeatedMessage', $summaryLine);
+        $this->assertStringNotContainsString('logFlushTrigger', $summaryLine);
+    }
+
+    private function logRepeatedMessage(ConsoleLogger $logger): void {
+        $logger->log(LogLevel::INFO, 'Repeated caller message');
+    }
+
+    private function logFlushTrigger(ConsoleLogger $logger): void {
+        $logger->log(LogLevel::INFO, 'Flush trigger message');
+    }
+
     public function test_deduplication_writes_first_occurrence_immediately() {
         $stream = self::createStream();
         $logger = new ConsoleLogger(LogLevel::INFO, enableDeduplication: true, stream: $stream);

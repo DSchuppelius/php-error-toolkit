@@ -34,6 +34,7 @@ abstract class LoggerAbstract implements LoggerInterface {
     protected ?string $lastLevel = null;
     protected ?string $lastMessage = null;
     protected array $lastContext = [];
+    protected ?string $lastCaller = null;
 
     public function __construct(string $logLevel = LogLevel::DEBUG, bool $enableDeduplication = true) {
         $this->setLogLevel($logLevel);
@@ -99,6 +100,7 @@ abstract class LoggerAbstract implements LoggerInterface {
         $this->lastLevel = null;
         $this->lastMessage = null;
         $this->lastContext = [];
+        $this->lastCaller = null;
     }
 
     /**
@@ -113,7 +115,7 @@ abstract class LoggerAbstract implements LoggerInterface {
         }
 
         $message = $this->lastMessage . " (x{$this->duplicateCount})";
-        $logEntry = $this->generateLogEntry($this->lastLevel, $message, $this->lastContext);
+        $logEntry = $this->generateLogEntry($this->lastLevel, $message, $this->lastContext, $this->lastCaller);
         $this->writeLog($logEntry, $this->lastLevel);
     }
 
@@ -183,6 +185,7 @@ abstract class LoggerAbstract implements LoggerInterface {
         'debug',
         'generateLogEntry',
         'getCallerFunction',
+        'resolveCaller',
         'writeLog',
     ];
 
@@ -274,6 +277,14 @@ abstract class LoggerAbstract implements LoggerInterface {
         return self::convertLogLevel($level) <= $this->logLevel;
     }
 
+    /**
+     * Ermittelt den Caller-String für einen Log-Eintrag
+     * ('-' bei deaktivierter Caller-Detection).
+     */
+    protected function resolveCaller(): string {
+        return $this->callerDetectionEnabled ? self::getCallerFunction($this->logLevel === 7) : '-';
+    }
+
     public function log($level, string|Stringable $message, array $context = []): void {
         if (!is_string($level)) {
             throw new InvalidArgumentException('Log level must be one of the PSR-3 LogLevel strings.');
@@ -287,6 +298,8 @@ abstract class LoggerAbstract implements LoggerInterface {
         // geschrieben, nur unmittelbare Wiederholungen werden unterdrückt und
         // beim nächsten anderen Eintrag bzw. Flush als "(xN)" zusammengefasst.
         // So entsteht keine Ausgabe-Latenz (tail -f, Queue-Worker).
+        $caller = null;
+
         if ($this->deduplicationEnabled) {
             $currentKey = $this->createLogKey($level, $message, $context);
 
@@ -299,23 +312,27 @@ abstract class LoggerAbstract implements LoggerInterface {
             // Anderer Eintrag: ggf. Wiederholungs-Zusammenfassung ausgeben
             $this->flushDuplicates();
 
-            // Aktuellen Eintrag für die Duplikat-Erkennung merken
+            // Aktuellen Eintrag für die Duplikat-Erkennung merken; den Caller
+            // jetzt festhalten, damit die (xN)-Summary die Quelle des ersten
+            // Auftretens zeigt und nicht den Auslöser des späteren Flush
+            $caller = $this->resolveCaller();
             $this->lastLogKey = $currentKey;
             $this->lastLevel = $level;
             $this->lastMessage = (string) $message;
             $this->lastContext = $context;
+            $this->lastCaller = $caller;
             $this->duplicateCount = 0;
         }
 
-        $logEntry = $this->generateLogEntry($level, $message, $context);
+        $logEntry = $this->generateLogEntry($level, $message, $context, $caller);
         $this->writeLog($logEntry, $level);
     }
 
-    protected function generateLogEntry(string $level, string|Stringable $message, array $context = []): string {
+    protected function generateLogEntry(string $level, string|Stringable $message, array $context = [], ?string $caller = null): string {
         [$context, $includeMessageHex] = $this->extractInternalContextFlags($context);
 
         $timestamp = date('Y-m-d H:i:s');
-        $caller = $this->callerDetectionEnabled ? self::getCallerFunction($this->logLevel === 7) : '-';
+        $caller ??= $this->resolveCaller();
         $messageString = self::interpolate((string) $message, $context);
         $contextString = empty($context) ? '' : ' ' . json_encode($context);
 
