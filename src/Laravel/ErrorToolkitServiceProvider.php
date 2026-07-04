@@ -13,8 +13,10 @@ declare(strict_types=1);
 namespace ERRORToolkit\Laravel;
 
 use ERRORToolkit\LoggerRegistry;
+use Illuminate\Container\Container;
 use Illuminate\Support\ServiceProvider;
 use Psr\Log\LoggerInterface;
+use Throwable;
 
 /**
  * Optional Laravel bridge (auto-discovered via composer extra).
@@ -48,20 +50,38 @@ class ErrorToolkitServiceProvider extends ServiceProvider {
         // previously cached logger/resolver before registering its own.
         LoggerRegistry::resetLogger();
 
+        // The resolver must not capture $this->app: the closure outlives the
+        // booting application (static registry), and the NEXT log call may
+        // happen when that app is already flushed — e.g. a plain PHPUnit test
+        // (no Laravel app) running after a feature test in the same process.
+        // Resolving against a dead container throws ("Class 'log' does not
+        // exist"). Therefore: always resolve against the CURRENT container,
+        // and fail soft (null → ErrorLog fallback) instead of throwing.
         LoggerRegistry::setLoggerResolver(function (): ?LoggerInterface {
-            $log = $this->app->make('log');
-
-            $channel = null;
-            $config = $this->app->make('config');
-            if (is_object($config) && method_exists($config, 'get')) {
-                $channel = $config->get('error-toolkit.channel');
+            $app = Container::getInstance();
+            if (! $app instanceof Container || ! $app->bound('log')) {
+                return null; // container gone or flushed → fallback logging
             }
 
-            if (is_string($channel) && $channel !== '' && is_object($log) && method_exists($log, 'channel')) {
-                $log = $log->channel($channel);
-            }
+            try {
+                $log = $app->make('log');
 
-            return $log instanceof LoggerInterface ? $log : null;
+                $channel = null;
+                if ($app->bound('config')) {
+                    $config = $app->make('config');
+                    if (is_object($config) && method_exists($config, 'get')) {
+                        $channel = $config->get('error-toolkit.channel');
+                    }
+                }
+
+                if (is_string($channel) && $channel !== '' && is_object($log) && method_exists($log, 'channel')) {
+                    $log = $log->channel($channel);
+                }
+
+                return $log instanceof LoggerInterface ? $log : null;
+            } catch (Throwable) {
+                return null; // never let logging take the process down
+            }
         });
     }
 }
