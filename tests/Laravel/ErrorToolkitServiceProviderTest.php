@@ -14,6 +14,7 @@ namespace Tests\Laravel;
 
 use ERRORToolkit\Laravel\ErrorToolkitServiceProvider;
 use ERRORToolkit\LoggerRegistry;
+use Illuminate\Container\Container;
 use Illuminate\Contracts\Foundation\Application;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\{LoggerInterface, NullLogger};
@@ -30,6 +31,7 @@ class ErrorToolkitServiceProviderTest extends TestCase {
 
     protected function tearDown(): void {
         LoggerRegistry::resetLogger();
+        Container::setInstance(null); // drop the global container set by makeApp()
     }
 
     private function makeApp(?string $channel): Application {
@@ -70,7 +72,13 @@ class ErrorToolkitServiceProviderTest extends TestCase {
             'log' => $logManager,
             default => null,
         });
+        $app->method('bound')->willReturnCallback(fn (string $abstract) => in_array($abstract, ['config', 'log'], true));
         $app->method('basePath')->willReturnCallback(fn ($path = '') => '/tmp/app/' . $path);
+
+        // The resolver resolves against the CURRENT global container
+        // (Container::getInstance()), exactly as Laravel wires it — so the test
+        // registers this app as that global instance.
+        Container::setInstance($app);
 
         return $app;
     }

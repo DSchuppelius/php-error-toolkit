@@ -58,8 +58,10 @@ class ErrorToolkitServiceProvider extends ServiceProvider {
         // exist"). Therefore: always resolve against the CURRENT container,
         // and fail soft (null → ErrorLog fallback) instead of throwing.
         LoggerRegistry::setLoggerResolver(function (): ?LoggerInterface {
+            // Container::getInstance() always returns a container; if no 'log'
+            // is bound (no Laravel app / flushed container) we fail soft.
             $app = Container::getInstance();
-            if (!$app instanceof Container || !$app->bound('log')) {
+            if (!$app->bound('log')) {
                 return null; // container gone or flushed → fallback logging
             }
 
