@@ -59,7 +59,7 @@ class ErrorToolkitServiceProvider extends ServiceProvider {
         // and fail soft (null → ErrorLog fallback) instead of throwing.
         LoggerRegistry::setLoggerResolver(function (): ?LoggerInterface {
             $app = Container::getInstance();
-            if (! $app instanceof Container || ! $app->bound('log')) {
+            if (!$app instanceof Container || !$app->bound('log')) {
                 return null; // container gone or flushed → fallback logging
             }
 

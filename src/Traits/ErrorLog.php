@@ -259,8 +259,33 @@ trait ErrorLog {
             syslog(self::getSyslogLevel($level), $logString);
             closelog();
         } else {
-            file_put_contents(sys_get_temp_dir() . '/php-error-toolkit.log', $logString . PHP_EOL, FILE_APPEND | LOCK_EX);
+            self::writeFallbackFile($logString);
         }
+    }
+
+    /**
+     * Schreibt eine Fallback-Log-Zeile in eine per-App eindeutige, restriktiv
+     * angelegte Temp-Datei.
+     *
+     * Statt eines festen, world-lesbaren Namens (/tmp/php-error-toolkit.log)
+     * wird ein schwer vorhersagbarer, projektspezifischer Name verwendet, die
+     * Datei mit 0600 angelegt (kein umask-Fenster) und ein bestehender Symlink
+     * nicht befolgt — schützt vor Cross-App-Kollision und Symlink-Angriffen
+     * (CWE-59/CWE-377) auf Multi-User-Hosts.
+     */
+    private static function writeFallbackFile(string $logString): void {
+        $name = 'php-error-toolkit-' . hash('sha256', self::detectProjectName() . '|' . __DIR__) . '.log';
+        $path = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $name;
+
+        if (is_link($path)) {
+            return; // einem untergeschobenen Symlink nicht folgen
+        }
+
+        if (!file_exists($path) && @touch($path)) {
+            @chmod($path, 0600);
+        }
+
+        @file_put_contents($path, $logString . PHP_EOL, FILE_APPEND | LOCK_EX);
     }
 
     /**
