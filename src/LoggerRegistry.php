@@ -15,6 +15,20 @@ namespace ERRORToolkit;
 use Closure;
 use Psr\Log\LoggerInterface;
 
+/**
+ * Process-global logger registry.
+ *
+ * WARNING: setLogger()/setLoggerResolver() install PROCESS-GLOBAL state. In a
+ * shared-nothing SAPI (mod_php, FPM) that is fine, but in long-running,
+ * potentially multi-tenant runtimes (Laravel Octane, Swoole, RoadRunner, queue
+ * workers) a logger set for one request/tenant persists into the next one on
+ * the same worker and can route another tenant's log records to the wrong sink.
+ *
+ * For those runtimes prefer {@see setLoggerResolver()} bound to the current
+ * request/container, and call {@see resetLogger()} at each request boundary
+ * (the Laravel bridge does this in boot()). Do not use setLogger() to route
+ * logs per tenant inside a shared worker.
+ */
 class LoggerRegistry {
     private static ?LoggerInterface $logger = null;
     private static ?Closure $resolver = null;

@@ -18,6 +18,24 @@ use Stringable;
 abstract class LoggerAbstract implements LoggerInterface {
     public const CONTEXT_KEY_MESSAGE_HEX = '_hexMessage';
 
+    /**
+     * Kontext-Schlüssel (case-insensitive verglichen), deren Werte vor dem
+     * Schreiben einer Log-Zeile maskiert werden. Defense-in-depth: greift für
+     * jeden Logger und jede Kontext-Quelle, damit Secrets (Tokens,
+     * Authorization/Set-Cookie-Header, Passwörter) nicht in die Log-Datei
+     * serialisiert werden.
+     */
+    protected const SENSITIVE_CONTEXT_KEYS = [
+        'authorization', 'proxy-authorization', 'cookie', 'set-cookie', 'www-authenticate',
+        'x-api-key', 'api-key', 'x-auth-token',
+        'access_token', 'refresh_token', 'id_token',
+        'client_secret', 'client_assertion', 'assertion', 'private_key',
+        'password', 'passwd', 'secret', 'token', 'api_key', 'api_token', 'apikey',
+        'auth_token', 'signature', 'code_verifier',
+    ];
+
+    protected const REDACTED_PLACEHOLDER = '[redacted]';
+
     protected int $logLevel;
 
     /**
@@ -330,10 +348,11 @@ abstract class LoggerAbstract implements LoggerInterface {
 
     protected function generateLogEntry(string $level, string|Stringable $message, array $context = [], ?string $caller = null): string {
         [$context, $includeMessageHex] = $this->extractInternalContextFlags($context);
+        $context = static::redactSensitiveContext($context);
 
         $timestamp = date('Y-m-d H:i:s');
         $caller ??= $this->resolveCaller();
-        $messageString = self::interpolate((string) $message, $context);
+        $messageString = self::sanitizeControlCharacters(self::interpolate((string) $message, $context));
         $contextString = empty($context) ? '' : ' ' . json_encode($context);
 
         if (!$includeMessageHex) {
@@ -359,6 +378,34 @@ abstract class LoggerAbstract implements LoggerInterface {
         unset($context[self::CONTEXT_KEY_MESSAGE_HEX]);
 
         return [$context, $includeMessageHex];
+    }
+
+    /**
+     * Redigiert rekursiv Werte, deren Schlüssel als sensibel gilt
+     * (case-insensitive). Greift auch in verschachtelte Arrays (z. B. den
+     * response_headers-Teilbaum), sodass Authorization/Set-Cookie/Token-Werte
+     * nicht in die Log-Zeile serialisiert werden.
+     */
+    protected static function redactSensitiveContext(array $context): array {
+        foreach ($context as $key => $value) {
+            if (is_string($key) && in_array(strtolower($key), static::SENSITIVE_CONTEXT_KEYS, true)) {
+                $context[$key] = static::REDACTED_PLACEHOLDER;
+            } elseif (is_array($value)) {
+                $context[$key] = static::redactSensitiveContext($value);
+            }
+        }
+
+        return $context;
+    }
+
+    /**
+     * Entfernt CR/LF und C0/DEL-Steuerzeichen (außer Tab) aus dem interpolierten
+     * Nachrichtentext, um Log-Injection/Log-Forging und ANSI-Escape-Manipulation
+     * des Operator-Terminals zu verhindern. Die strukturellen Zeilenumbrüche des
+     * Loggers (Hex-Modus) werden erst danach ergänzt und bleiben erhalten.
+     */
+    protected static function sanitizeControlCharacters(string $text): string {
+        return preg_replace('/[\x00-\x08\x0A-\x1F\x7F]/', '', $text) ?? $text;
     }
 
     /**
