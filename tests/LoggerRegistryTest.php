@@ -93,21 +93,21 @@ class LoggerRegistryTest extends TestCase {
     }
 
     public function test_resolver_recovers_after_transient_failure(): void {
-        $alive = false;
+        $attempts = 0;
         $logger = new NullLogger;
-        LoggerRegistry::setLoggerResolver(function () use (&$alive, $logger): ?\Psr\Log\LoggerInterface {
-            if (!$alive) {
+        LoggerRegistry::setLoggerResolver(function () use (&$attempts, $logger): \Psr\Log\LoggerInterface {
+            $attempts++;
+            if ($attempts === 1) {
                 throw new \RuntimeException('container not ready');
             }
 
             return $logger;
         });
 
-        // While "dead": fail soft.
+        // First call (container "dead"): fail soft to null.
         $this->assertNull(LoggerRegistry::getLogger());
-        // Once the container is back (e.g. a fresh app booted): re-resolves to
+        // Second call (container back, e.g. a fresh app booted): re-resolves to
         // the live logger — a cached failure would have frozen it at null.
-        $alive = true;
         $this->assertSame($logger, LoggerRegistry::getLogger());
     }
 
