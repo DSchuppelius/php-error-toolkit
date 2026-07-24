@@ -59,7 +59,7 @@ class LoggerRegistryTest extends TestCase {
         $this->assertSame($second, LoggerRegistry::getLogger());
     }
 
-    public function test_resolver_is_invoked_lazily_and_only_once(): void {
+    public function test_resolver_is_invoked_lazily_and_on_every_call(): void {
         $calls = 0;
         $logger = new NullLogger;
         LoggerRegistry::setLoggerResolver(function () use (&$calls, $logger) {
@@ -71,7 +71,44 @@ class LoggerRegistryTest extends TestCase {
         $this->assertSame(0, $calls, 'Resolver must not run before the first getLogger() call');
         $this->assertSame($logger, LoggerRegistry::getLogger());
         $this->assertSame($logger, LoggerRegistry::getLogger());
-        $this->assertSame(1, $calls, 'Resolved logger must be cached');
+        // Resolver results are deliberately NOT cached: re-resolving on every
+        // call keeps the logger bound to the CURRENT container, so a flushed
+        // application (a plain PHPUnit test after a feature test in the same
+        // process, an Octane worker, a queue restart) never yields a stale,
+        // crashing logger. An explicitly set logger (setLogger) is still cached.
+        $this->assertSame(2, $calls, 'Resolver result must NOT be cached (re-resolved each call)');
+    }
+
+    public function test_throwing_resolver_fails_soft_instead_of_crashing_logging(): void {
+        LoggerRegistry::setLoggerResolver(function (): never {
+            // Simulates a resolver whose captured/current container was flushed
+            // ("Class 'log' does not exist" / "Target class [config]").
+            throw new \RuntimeException('container flushed');
+        });
+
+        // Logging must never take the process down: getLogger() swallows the
+        // resolver failure and returns null (ErrorLog then falls back).
+        $this->assertNull(LoggerRegistry::getLogger());
+        $this->assertFalse(LoggerRegistry::hasLogger());
+    }
+
+    public function test_resolver_recovers_after_transient_failure(): void {
+        $alive = false;
+        $logger = new NullLogger;
+        LoggerRegistry::setLoggerResolver(function () use (&$alive, $logger): ?\Psr\Log\LoggerInterface {
+            if (!$alive) {
+                throw new \RuntimeException('container not ready');
+            }
+
+            return $logger;
+        });
+
+        // While "dead": fail soft.
+        $this->assertNull(LoggerRegistry::getLogger());
+        // Once the container is back (e.g. a fresh app booted): re-resolves to
+        // the live logger — a cached failure would have frozen it at null.
+        $alive = true;
+        $this->assertSame($logger, LoggerRegistry::getLogger());
     }
 
     public function test_explicit_logger_wins_over_resolver(): void {
