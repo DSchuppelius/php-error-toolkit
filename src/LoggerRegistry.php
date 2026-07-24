@@ -52,14 +52,34 @@ class LoggerRegistry {
     }
 
     public static function getLogger(): ?LoggerInterface {
-        if (self::$logger === null && self::$resolver !== null) {
-            $resolved = (self::$resolver)();
-            if ($resolved instanceof LoggerInterface) {
-                self::$logger = $resolved;
-            }
+        // An explicitly set logger (setLogger) wins and is returned as-is —
+        // the caller owns its lifecycle.
+        if (self::$logger !== null) {
+            return self::$logger;
         }
 
-        return self::$logger;
+        if (self::$resolver === null) {
+            return null;
+        }
+
+        // Resolver results are DELIBERATELY NOT cached in self::$logger:
+        // caching would freeze a logger bound to the application instance that
+        // happened to be current on the first call. That instance may already
+        // be flushed on the next call (a plain PHPUnit test after a feature
+        // test in the same process, an Octane worker, a queue restart) — using
+        // the cached logger then resolves channels/config against a dead
+        // container ("Class 'log' does not exist" / "Target class [config]").
+        // Re-resolving on every call is cheap (the container returns its
+        // singletons) and always targets the CURRENT container. A resolver
+        // that still throws must never take logging — and thus the process —
+        // down, so we fail soft to null (ErrorLog falls back to STDERR/syslog).
+        try {
+            $resolved = (self::$resolver)();
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return $resolved instanceof LoggerInterface ? $resolved : null;
     }
 
     public static function resetLogger(): void {
