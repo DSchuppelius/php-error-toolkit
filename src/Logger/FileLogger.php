@@ -141,7 +141,7 @@ class FileLogger extends LoggerAbstract {
 
     private function doRotate(): void {
         if ($this->rotateLogs) {
-            $archiveFile = $this->logFile . '.' . date('Ymd_His');
+            $archiveFile = $this->uniqueArchiveName();
             if (!@rename($this->logFile, $archiveFile)) {
                 // Datei wurde möglicherweise bereits durch einen anderen Prozess rotiert
                 if (file_exists($this->logFile)) {
@@ -164,6 +164,26 @@ class FileLogger extends LoggerAbstract {
             @file_put_contents($this->logFile, $initialContent);
             @chmod($this->logFile, $this->filePermissions);
         }
+    }
+
+    /**
+     * Erzeugt einen eindeutigen Archivnamen. Der Zeitstempel ist nur sekundengenau;
+     * bei mehreren Rotationen innerhalb derselben Sekunde (kleine maxFileSize oder
+     * hohes Log-Volumen) würde ein reiner Zeitstempel-Name das vorherige Archiv
+     * überschreiben und dessen Inhalt verlieren. Ein Zähler-Suffix macht den Namen
+     * eindeutig. Läuft innerhalb des Rotations-Locks, daher kollisionsfrei.
+     */
+    private function uniqueArchiveName(): string {
+        $base = $this->logFile . '.' . date('Ymd_His');
+        $candidate = $base;
+        $counter = 1;
+
+        while (file_exists($candidate)) {
+            $candidate = $base . '_' . $counter;
+            $counter++;
+        }
+
+        return $candidate;
     }
 
     public function getMaxArchiveFiles(): ?int {
@@ -196,7 +216,7 @@ class FileLogger extends LoggerAbstract {
 
         $archives = array_values(array_filter(
             $archives,
-            fn (string $file): bool => preg_match('/\.\d{8}_\d{6}$/', $file) === 1
+            fn (string $file): bool => preg_match('/\.\d{8}_\d{6}(?:_\d+)?$/', $file) === 1
         ));
 
         if (count($archives) <= $this->maxArchiveFiles) {

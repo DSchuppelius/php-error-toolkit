@@ -114,4 +114,70 @@ class FileLoggerTest extends TestCase {
         // Versucht in eine Datei zu schreiben, für die keine Schreibrechte bestehen
         $logger->log(LogLevel::ERROR, "Should fail");
     }
+
+    /**
+     * Regression: Mehrere Rotationen innerhalb derselben Sekunde dürfen sich nicht
+     * gegenseitig überschreiben (der Archivname war zuvor nur sekundengenau).
+     */
+    public function test_rapid_rotation_does_not_lose_archives(): void {
+        $dir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'rot_' . uniqid();
+        mkdir($dir);
+        $logFile = $dir . DIRECTORY_SEPARATOR . 'app.log';
+
+        try {
+            // Kleine maxFileSize erzwingt viele Rotationen in derselben Sekunde;
+            // maxArchiveFiles=null hält alle Archive (isoliert den Kollisions-Effekt).
+            $logger = new FileLogger($logFile, LogLevel::DEBUG, true, 200, true, false, 0660, true, null);
+
+            $expected = 40;
+            for ($i = 0; $i < $expected; $i++) {
+                $logger->info("Zeile Nummer {$i} mit ausreichend Fülltext für schnelle Rotation");
+            }
+            $logger->flushDuplicates();
+
+            $archives = array_filter(
+                glob($logFile . '.*') ?: [],
+                fn (string $f): bool => preg_match('/\.\d{8}_\d{6}(?:_\d+)?$/', $f) === 1
+            );
+
+            $total = substr_count((string) file_get_contents($logFile), 'Zeile Nummer');
+            foreach ($archives as $archive) {
+                $total += substr_count((string) file_get_contents($archive), 'Zeile Nummer');
+            }
+
+            $this->assertSame($expected, $total, 'Rotation darf keine Log-Zeilen durch Archiv-Namenskollision verlieren.');
+            $this->assertGreaterThan(1, count($archives), 'Es sollten mehrere eindeutige Archive entstanden sein.');
+        } finally {
+            array_map('unlink', glob($dir . DIRECTORY_SEPARATOR . '*') ?: []);
+            @rmdir($dir);
+        }
+    }
+
+    /**
+     * Der Archiv-Cap (maxArchiveFiles) muss auch für Namen mit Zähler-Suffix greifen.
+     */
+    public function test_rotation_respects_archive_cap_with_suffixed_names(): void {
+        $dir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'rotcap_' . uniqid();
+        mkdir($dir);
+        $logFile = $dir . DIRECTORY_SEPARATOR . 'app.log';
+
+        try {
+            $logger = new FileLogger($logFile, LogLevel::DEBUG, true, 200, true, false, 0660, true, 3);
+
+            for ($i = 0; $i < 60; $i++) {
+                $logger->info("Fülltext Zeile {$i} xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+            }
+            $logger->flushDuplicates();
+
+            $archives = array_filter(
+                glob($logFile . '.*') ?: [],
+                fn (string $f): bool => preg_match('/\.\d{8}_\d{6}(?:_\d+)?$/', $f) === 1
+            );
+
+            $this->assertLessThanOrEqual(3, count($archives), 'maxArchiveFiles muss auch Suffix-Archive begrenzen.');
+        } finally {
+            array_map('unlink', glob($dir . DIRECTORY_SEPARATOR . '*') ?: []);
+            @rmdir($dir);
+        }
+    }
 }

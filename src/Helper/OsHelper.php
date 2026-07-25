@@ -207,9 +207,32 @@ class OsHelper {
     }
 
     /**
+     * Prüft, ob shell_exec (und damit auch die Backtick-Syntax) nutzbar ist.
+     * Auf gehärteten Hosts kann die Funktion via disable_functions gesperrt sein.
+     */
+    public static function canExecuteShellCommands(): bool {
+        if (!function_exists('shell_exec')) {
+            return false;
+        }
+
+        $disabled = strtolower((string) ini_get('disable_functions'));
+        if ($disabled === '') {
+            return true;
+        }
+
+        $disabledList = array_map('trim', explode(',', $disabled));
+
+        return !in_array('shell_exec', $disabledList, true);
+    }
+
+    /**
      * Gibt die verfügbaren CPU-Kerne zurück.
      */
     public static function getCpuCoreCount(): int {
+        if (!self::canExecuteShellCommands()) {
+            return 1;
+        }
+
         if (self::isWindows()) {
             $cores = shell_exec('echo %NUMBER_OF_PROCESSORS%');
             return (int) trim($cores ?: '1');

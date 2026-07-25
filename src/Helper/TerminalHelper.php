@@ -90,6 +90,11 @@ class TerminalHelper {
             return 0;
         }
 
+        // Benötigt shell_exec/Backticks und system(); auf gehärteten Hosts nicht verfügbar.
+        if (!OsHelper::canExecuteShellCommands()) {
+            return 0;
+        }
+
         // Terminal-Einstellungen speichern
         $ttyProps = trim(`stty -g 2>/dev/null`);
         if (empty($ttyProps)) {
@@ -184,26 +189,28 @@ class TerminalHelper {
             return (int) $columns;
         }
 
-        // System-spezifische Befehle
-        if (OsHelper::isWindows()) {
-            $output = shell_exec('mode con | findstr "Columns"');
-            if ($output && preg_match('/Columns:\s*(\d+)/', $output, $matches)) {
-                return (int) $matches[1];
-            }
-        } else {
-            // Unix: tput verwenden
-            if (OsHelper::findExecutable('tput')) {
-                $width = shell_exec('tput cols 2>/dev/null');
-                if ($width && is_numeric(trim($width))) {
-                    return (int) trim($width);
-                }
-            }
-
-            // Fallback: stty verwenden
-            if (OsHelper::findExecutable('stty')) {
-                $output = shell_exec('stty size 2>/dev/null');
-                if ($output && preg_match('/\d+\s+(\d+)/', trim($output), $matches)) {
+        // System-spezifische Befehle (benötigen shell_exec)
+        if (OsHelper::canExecuteShellCommands()) {
+            if (OsHelper::isWindows()) {
+                $output = shell_exec('mode con | findstr "Columns"');
+                if ($output && preg_match('/Columns:\s*(\d+)/', $output, $matches)) {
                     return (int) $matches[1];
+                }
+            } else {
+                // Unix: tput verwenden
+                if (OsHelper::findExecutable('tput')) {
+                    $width = shell_exec('tput cols 2>/dev/null');
+                    if ($width && is_numeric(trim($width))) {
+                        return (int) trim($width);
+                    }
+                }
+
+                // Fallback: stty verwenden
+                if (OsHelper::findExecutable('stty')) {
+                    $output = shell_exec('stty size 2>/dev/null');
+                    if ($output && preg_match('/\d+\s+(\d+)/', trim($output), $matches)) {
+                        return (int) $matches[1];
+                    }
                 }
             }
         }
@@ -225,26 +232,28 @@ class TerminalHelper {
             return (int) $lines;
         }
 
-        // System-spezifische Befehle
-        if (OsHelper::isWindows()) {
-            $output = shell_exec('mode con | findstr "Lines"');
-            if ($output && preg_match('/Lines:\s*(\d+)/', $output, $matches)) {
-                return (int) $matches[1];
-            }
-        } else {
-            // Unix: tput verwenden
-            if (OsHelper::findExecutable('tput')) {
-                $height = shell_exec('tput lines 2>/dev/null');
-                if ($height && is_numeric(trim($height))) {
-                    return (int) trim($height);
-                }
-            }
-
-            // Fallback: stty verwenden
-            if (OsHelper::findExecutable('stty')) {
-                $output = shell_exec('stty size 2>/dev/null');
-                if ($output && preg_match('/(\d+)\s+\d+/', trim($output), $matches)) {
+        // System-spezifische Befehle (benötigen shell_exec)
+        if (OsHelper::canExecuteShellCommands()) {
+            if (OsHelper::isWindows()) {
+                $output = shell_exec('mode con | findstr "Lines"');
+                if ($output && preg_match('/Lines:\s*(\d+)/', $output, $matches)) {
                     return (int) $matches[1];
+                }
+            } else {
+                // Unix: tput verwenden
+                if (OsHelper::findExecutable('tput')) {
+                    $height = shell_exec('tput lines 2>/dev/null');
+                    if ($height && is_numeric(trim($height))) {
+                        return (int) trim($height);
+                    }
+                }
+
+                // Fallback: stty verwenden
+                if (OsHelper::findExecutable('stty')) {
+                    $output = shell_exec('stty size 2>/dev/null');
+                    if ($output && preg_match('/(\d+)\s+\d+/', trim($output), $matches)) {
+                        return (int) $matches[1];
+                    }
                 }
             }
         }
