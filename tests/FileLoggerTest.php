@@ -35,7 +35,7 @@ class FileLoggerTest extends TestCase {
         }
     }
 
-    public function test_logs_at_or_above_threshold() {
+    public function test_logs_at_or_above_threshold(): void {
         $logger = new FileLogger($this->testLogFile, LogLevel::WARNING, true, 5000000, true, enableDeduplication: false);
 
         $logger->log(LogLevel::INFO, "This is an info message");
@@ -44,26 +44,26 @@ class FileLoggerTest extends TestCase {
 
         $logger->log(LogLevel::ERROR, "This is an error message");
 
-        $logContent = file_get_contents($this->testLogFile);
+        $logContent = (string) file_get_contents($this->testLogFile);
 
         $this->assertStringNotContainsString("This is an info message", $logContent, "INFO sollte nicht geloggt werden, da unterhalb WARNING.");
         $this->assertStringContainsString("This is a warning message", $logContent, "WARNING sollte geloggt werden.");
         $this->assertStringContainsString("This is an error message", $logContent, "ERROR sollte geloggt werden.");
     }
 
-    public function test_uses_default_log_file_if_none_provided() {
+    public function test_uses_default_log_file_if_none_provided(): void {
         $logger = new FileLogger(null, LogLevel::DEBUG, true, 5000000, true, enableDeduplication: false);
         $logger->log(LogLevel::DEBUG, "Message in default file");
 
         $defaultLog = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'default.log';
 
         $this->assertFileExists($defaultLog, "Default-Logdatei sollte erstellt werden.");
-        $this->assertStringContainsString("Message in default file", file_get_contents($defaultLog));
+        $this->assertStringContainsString("Message in default file", (string) file_get_contents($defaultLog));
 
         unlink($defaultLog);
     }
 
-    public function test_file_creation_failure_throws_exception() {
+    public function test_file_creation_failure_throws_exception(): void {
         $nonWritableDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'no_write_' . uniqid();
         if (!mkdir($nonWritableDir) && !is_dir($nonWritableDir)) {
             $this->markTestSkipped("Konnte kein temporäres Verzeichnis erstellen, Test wird übersprungen.");
@@ -101,7 +101,7 @@ class FileLoggerTest extends TestCase {
         }
     }
 
-    public function test_write_failure_throws_exception() {
+    public function test_write_failure_throws_exception(): void {
         // Legt eine Logdatei an und entzieht die Schreibrechte, um den Schreibfehler zu simulieren.
         file_put_contents($this->testLogFile, "");
         chmod($this->testLogFile, 0400); // Nur Lese-Rechte

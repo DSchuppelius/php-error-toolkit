@@ -23,106 +23,106 @@ use Throwable;
  * ErrorLog Trait - Provides convenient logging methods via magic methods.
  *
  * Logging methods (return void):
- * @method void logDebug(string $message, array $context = [])
- * @method void logInfo(string $message, array $context = [])
- * @method void logNotice(string $message, array $context = [])
- * @method void logWarning(string $message, array $context = [])
- * @method void logError(string $message, array $context = [])
- * @method void logCritical(string $message, array $context = [])
- * @method void logAlert(string $message, array $context = [])
- * @method void logEmergency(string $message, array $context = [])
- * @method void logDebugHex(string $message, array $context = [])
- * @method void logInfoHex(string $message, array $context = [])
- * @method void logNoticeHex(string $message, array $context = [])
- * @method void logWarningHex(string $message, array $context = [])
- * @method void logErrorHex(string $message, array $context = [])
- * @method void logCriticalHex(string $message, array $context = [])
- * @method void logAlertHex(string $message, array $context = [])
- * @method void logEmergencyHex(string $message, array $context = [])
+ * @method void logDebug(string $message, array<string, mixed> $context = [])
+ * @method void logInfo(string $message, array<string, mixed> $context = [])
+ * @method void logNotice(string $message, array<string, mixed> $context = [])
+ * @method void logWarning(string $message, array<string, mixed> $context = [])
+ * @method void logError(string $message, array<string, mixed> $context = [])
+ * @method void logCritical(string $message, array<string, mixed> $context = [])
+ * @method void logAlert(string $message, array<string, mixed> $context = [])
+ * @method void logEmergency(string $message, array<string, mixed> $context = [])
+ * @method void logDebugHex(string $message, array<string, mixed> $context = [])
+ * @method void logInfoHex(string $message, array<string, mixed> $context = [])
+ * @method void logNoticeHex(string $message, array<string, mixed> $context = [])
+ * @method void logWarningHex(string $message, array<string, mixed> $context = [])
+ * @method void logErrorHex(string $message, array<string, mixed> $context = [])
+ * @method void logCriticalHex(string $message, array<string, mixed> $context = [])
+ * @method void logAlertHex(string $message, array<string, mixed> $context = [])
+ * @method void logEmergencyHex(string $message, array<string, mixed> $context = [])
  *
  * Static logging methods (return void):
- * @method static void logDebug(string $message, array $context = [])
- * @method static void logInfo(string $message, array $context = [])
- * @method static void logNotice(string $message, array $context = [])
- * @method static void logWarning(string $message, array $context = [])
- * @method static void logError(string $message, array $context = [])
- * @method static void logCritical(string $message, array $context = [])
- * @method static void logAlert(string $message, array $context = [])
- * @method static void logEmergency(string $message, array $context = [])
- * @method static void logDebugHex(string $message, array $context = [])
- * @method static void logInfoHex(string $message, array $context = [])
- * @method static void logNoticeHex(string $message, array $context = [])
- * @method static void logWarningHex(string $message, array $context = [])
- * @method static void logErrorHex(string $message, array $context = [])
- * @method static void logCriticalHex(string $message, array $context = [])
- * @method static void logAlertHex(string $message, array $context = [])
- * @method static void logEmergencyHex(string $message, array $context = [])
+ * @method static void logDebug(string $message, array<string, mixed> $context = [])
+ * @method static void logInfo(string $message, array<string, mixed> $context = [])
+ * @method static void logNotice(string $message, array<string, mixed> $context = [])
+ * @method static void logWarning(string $message, array<string, mixed> $context = [])
+ * @method static void logError(string $message, array<string, mixed> $context = [])
+ * @method static void logCritical(string $message, array<string, mixed> $context = [])
+ * @method static void logAlert(string $message, array<string, mixed> $context = [])
+ * @method static void logEmergency(string $message, array<string, mixed> $context = [])
+ * @method static void logDebugHex(string $message, array<string, mixed> $context = [])
+ * @method static void logInfoHex(string $message, array<string, mixed> $context = [])
+ * @method static void logNoticeHex(string $message, array<string, mixed> $context = [])
+ * @method static void logWarningHex(string $message, array<string, mixed> $context = [])
+ * @method static void logErrorHex(string $message, array<string, mixed> $context = [])
+ * @method static void logCriticalHex(string $message, array<string, mixed> $context = [])
+ * @method static void logAlertHex(string $message, array<string, mixed> $context = [])
+ * @method static void logEmergencyHex(string $message, array<string, mixed> $context = [])
  *
  * Log and throw methods (log message and throw exception, never returns):
- * @method static never logErrorAndThrow(string $exceptionClass, string $message, array $context = [], ?Throwable $previous = null, int $code = 0)
- * @method static never logCriticalAndThrow(string $exceptionClass, string $message, array $context = [], ?Throwable $previous = null, int $code = 0)
- * @method static never logAlertAndThrow(string $exceptionClass, string $message, array $context = [], ?Throwable $previous = null, int $code = 0)
- * @method static never logEmergencyAndThrow(string $exceptionClass, string $message, array $context = [], ?Throwable $previous = null, int $code = 0)
+ * @method static never logErrorAndThrow(string $exceptionClass, string $message, array<string, mixed> $context = [], ?Throwable $previous = null, int $code = 0)
+ * @method static never logCriticalAndThrow(string $exceptionClass, string $message, array<string, mixed> $context = [], ?Throwable $previous = null, int $code = 0)
+ * @method static never logAlertAndThrow(string $exceptionClass, string $message, array<string, mixed> $context = [], ?Throwable $previous = null, int $code = 0)
+ * @method static never logEmergencyAndThrow(string $exceptionClass, string $message, array<string, mixed> $context = [], ?Throwable $previous = null, int $code = 0)
  *
  * Conditional logging methods (log if condition is true):
- * @method void logDebugIf(bool $condition, string $message, array $context = [])
- * @method void logInfoIf(bool $condition, string $message, array $context = [])
- * @method void logNoticeIf(bool $condition, string $message, array $context = [])
- * @method void logWarningIf(bool $condition, string $message, array $context = [])
- * @method void logErrorIf(bool $condition, string $message, array $context = [])
- * @method void logCriticalIf(bool $condition, string $message, array $context = [])
- * @method void logAlertIf(bool $condition, string $message, array $context = [])
- * @method void logEmergencyIf(bool $condition, string $message, array $context = [])
+ * @method void logDebugIf(bool $condition, string $message, array<string, mixed> $context = [])
+ * @method void logInfoIf(bool $condition, string $message, array<string, mixed> $context = [])
+ * @method void logNoticeIf(bool $condition, string $message, array<string, mixed> $context = [])
+ * @method void logWarningIf(bool $condition, string $message, array<string, mixed> $context = [])
+ * @method void logErrorIf(bool $condition, string $message, array<string, mixed> $context = [])
+ * @method void logCriticalIf(bool $condition, string $message, array<string, mixed> $context = [])
+ * @method void logAlertIf(bool $condition, string $message, array<string, mixed> $context = [])
+ * @method void logEmergencyIf(bool $condition, string $message, array<string, mixed> $context = [])
  *
  * Static conditional logging methods (log if condition is true):
- * @method static void logDebugIf(bool $condition, string $message, array $context = [])
- * @method static void logInfoIf(bool $condition, string $message, array $context = [])
- * @method static void logNoticeIf(bool $condition, string $message, array $context = [])
- * @method static void logWarningIf(bool $condition, string $message, array $context = [])
- * @method static void logErrorIf(bool $condition, string $message, array $context = [])
- * @method static void logCriticalIf(bool $condition, string $message, array $context = [])
- * @method static void logAlertIf(bool $condition, string $message, array $context = [])
- * @method static void logEmergencyIf(bool $condition, string $message, array $context = [])
+ * @method static void logDebugIf(bool $condition, string $message, array<string, mixed> $context = [])
+ * @method static void logInfoIf(bool $condition, string $message, array<string, mixed> $context = [])
+ * @method static void logNoticeIf(bool $condition, string $message, array<string, mixed> $context = [])
+ * @method static void logWarningIf(bool $condition, string $message, array<string, mixed> $context = [])
+ * @method static void logErrorIf(bool $condition, string $message, array<string, mixed> $context = [])
+ * @method static void logCriticalIf(bool $condition, string $message, array<string, mixed> $context = [])
+ * @method static void logAlertIf(bool $condition, string $message, array<string, mixed> $context = [])
+ * @method static void logEmergencyIf(bool $condition, string $message, array<string, mixed> $context = [])
  *
  * Conditional logging methods (log if condition is false):
- * @method void logDebugUnless(bool $condition, string $message, array $context = [])
- * @method void logInfoUnless(bool $condition, string $message, array $context = [])
- * @method void logNoticeUnless(bool $condition, string $message, array $context = [])
- * @method void logWarningUnless(bool $condition, string $message, array $context = [])
- * @method void logErrorUnless(bool $condition, string $message, array $context = [])
- * @method void logCriticalUnless(bool $condition, string $message, array $context = [])
- * @method void logAlertUnless(bool $condition, string $message, array $context = [])
- * @method void logEmergencyUnless(bool $condition, string $message, array $context = [])
+ * @method void logDebugUnless(bool $condition, string $message, array<string, mixed> $context = [])
+ * @method void logInfoUnless(bool $condition, string $message, array<string, mixed> $context = [])
+ * @method void logNoticeUnless(bool $condition, string $message, array<string, mixed> $context = [])
+ * @method void logWarningUnless(bool $condition, string $message, array<string, mixed> $context = [])
+ * @method void logErrorUnless(bool $condition, string $message, array<string, mixed> $context = [])
+ * @method void logCriticalUnless(bool $condition, string $message, array<string, mixed> $context = [])
+ * @method void logAlertUnless(bool $condition, string $message, array<string, mixed> $context = [])
+ * @method void logEmergencyUnless(bool $condition, string $message, array<string, mixed> $context = [])
  *
  * Static conditional logging methods (log if condition is false):
- * @method static void logDebugUnless(bool $condition, string $message, array $context = [])
- * @method static void logInfoUnless(bool $condition, string $message, array $context = [])
- * @method static void logNoticeUnless(bool $condition, string $message, array $context = [])
- * @method static void logWarningUnless(bool $condition, string $message, array $context = [])
- * @method static void logErrorUnless(bool $condition, string $message, array $context = [])
- * @method static void logCriticalUnless(bool $condition, string $message, array $context = [])
- * @method static void logAlertUnless(bool $condition, string $message, array $context = [])
- * @method static void logEmergencyUnless(bool $condition, string $message, array $context = [])
+ * @method static void logDebugUnless(bool $condition, string $message, array<string, mixed> $context = [])
+ * @method static void logInfoUnless(bool $condition, string $message, array<string, mixed> $context = [])
+ * @method static void logNoticeUnless(bool $condition, string $message, array<string, mixed> $context = [])
+ * @method static void logWarningUnless(bool $condition, string $message, array<string, mixed> $context = [])
+ * @method static void logErrorUnless(bool $condition, string $message, array<string, mixed> $context = [])
+ * @method static void logCriticalUnless(bool $condition, string $message, array<string, mixed> $context = [])
+ * @method static void logAlertUnless(bool $condition, string $message, array<string, mixed> $context = [])
+ * @method static void logEmergencyUnless(bool $condition, string $message, array<string, mixed> $context = [])
  *
  * Log and return methods (log message and return value):
- * @method mixed logDebugAndReturn(mixed $value, string $message, array $context = [])
- * @method mixed logInfoAndReturn(mixed $value, string $message, array $context = [])
- * @method mixed logNoticeAndReturn(mixed $value, string $message, array $context = [])
- * @method mixed logWarningAndReturn(mixed $value, string $message, array $context = [])
- * @method mixed logErrorAndReturn(mixed $value, string $message, array $context = [])
- * @method mixed logCriticalAndReturn(mixed $value, string $message, array $context = [])
- * @method mixed logAlertAndReturn(mixed $value, string $message, array $context = [])
- * @method mixed logEmergencyAndReturn(mixed $value, string $message, array $context = [])
+ * @method mixed logDebugAndReturn(mixed $value, string $message, array<string, mixed> $context = [])
+ * @method mixed logInfoAndReturn(mixed $value, string $message, array<string, mixed> $context = [])
+ * @method mixed logNoticeAndReturn(mixed $value, string $message, array<string, mixed> $context = [])
+ * @method mixed logWarningAndReturn(mixed $value, string $message, array<string, mixed> $context = [])
+ * @method mixed logErrorAndReturn(mixed $value, string $message, array<string, mixed> $context = [])
+ * @method mixed logCriticalAndReturn(mixed $value, string $message, array<string, mixed> $context = [])
+ * @method mixed logAlertAndReturn(mixed $value, string $message, array<string, mixed> $context = [])
+ * @method mixed logEmergencyAndReturn(mixed $value, string $message, array<string, mixed> $context = [])
  *
  * Static log and return methods:
- * @method static mixed logDebugAndReturn(mixed $value, string $message, array $context = [])
- * @method static mixed logInfoAndReturn(mixed $value, string $message, array $context = [])
- * @method static mixed logNoticeAndReturn(mixed $value, string $message, array $context = [])
- * @method static mixed logWarningAndReturn(mixed $value, string $message, array $context = [])
- * @method static mixed logErrorAndReturn(mixed $value, string $message, array $context = [])
- * @method static mixed logCriticalAndReturn(mixed $value, string $message, array $context = [])
- * @method static mixed logAlertAndReturn(mixed $value, string $message, array $context = [])
- * @method static mixed logEmergencyAndReturn(mixed $value, string $message, array $context = [])
+ * @method static mixed logDebugAndReturn(mixed $value, string $message, array<string, mixed> $context = [])
+ * @method static mixed logInfoAndReturn(mixed $value, string $message, array<string, mixed> $context = [])
+ * @method static mixed logNoticeAndReturn(mixed $value, string $message, array<string, mixed> $context = [])
+ * @method static mixed logWarningAndReturn(mixed $value, string $message, array<string, mixed> $context = [])
+ * @method static mixed logErrorAndReturn(mixed $value, string $message, array<string, mixed> $context = [])
+ * @method static mixed logCriticalAndReturn(mixed $value, string $message, array<string, mixed> $context = [])
+ * @method static mixed logAlertAndReturn(mixed $value, string $message, array<string, mixed> $context = [])
+ * @method static mixed logEmergencyAndReturn(mixed $value, string $message, array<string, mixed> $context = [])
  *
  * Log with timer methods (execute callback and log duration):
  * @method mixed logDebugWithTimer(Closure $callback, string $description)
@@ -149,6 +149,8 @@ trait ErrorLog {
 
     /**
      * PSR-LogLevel für magische Methoden
+     *
+     * @var array<string, string>
      */
     private static array $logLevelMap = [
         'Debug' => LogLevel::DEBUG,
@@ -218,6 +220,8 @@ trait ErrorLog {
      * selben Prozess: PHPUnit, Octane, Queue-Worker) überleben und gegen den
      * toten Container loggen. Nur ein explizit via setLogger() gesetzter
      * Logger bleibt in self::$logger bestehen.
+     *
+     * @param array<string, mixed> $context
      */
     private static function logInternal(string $level, string $message, array $context = []): void {
         $message = LoggerAbstract::interpolate($message, $context);
@@ -314,7 +318,7 @@ trait ErrorLog {
      *
      * @param Throwable $exception Die zu loggende Exception
      * @param string $level Das Log-Level (Standard: ERROR)
-     * @param array $context Zusätzlicher Kontext
+     * @param array<string, mixed> $context Zusätzlicher Kontext
      */
     public static function logException(Throwable $exception, string $level = LogLevel::ERROR, array $context = []): void {
         $context = array_merge($context, self::extractExceptionContext($exception));
@@ -332,6 +336,8 @@ trait ErrorLog {
 
     /**
      * Extrahiert Kontext-Informationen aus einer Exception
+     *
+     * @return array<string, mixed>
      */
     private static function extractExceptionContext(Throwable $exception): array {
         $context = [
@@ -354,8 +360,8 @@ trait ErrorLog {
      * Erstellt einen Kontext mit automatisch erfassten Debug-Informationen.
      * Ermittelt automatisch den ersten externen Caller außerhalb des Traits.
      *
-     * @param array $additionalContext Zusätzlicher Kontext
-     * @return array Der erweiterte Kontext
+     * @param array<string, mixed> $additionalContext Zusätzlicher Kontext
+     * @return array<string, mixed> Der erweiterte Kontext
      */
     public static function createDebugContext(array $additionalContext = []): array {
         $caller = LoggerAbstract::getExternalCaller();
@@ -377,7 +383,7 @@ trait ErrorLog {
      * Interpoliert PSR-3 Platzhalter in der Nachricht mit Kontext-Werten
      *
      * @param string $message Die Nachricht mit {placeholder} Platzhaltern
-     * @param array $context Der Kontext mit Ersetzungswerten
+     * @param array<string, mixed> $context Der Kontext mit Ersetzungswerten
      * @return string Die interpolierte Nachricht
      */
     public static function interpolateMessage(string $message, array $context): string {
@@ -386,6 +392,8 @@ trait ErrorLog {
 
     /**
      * Suffix-Map für Magic-Method-Typen
+     *
+     * @var array<string, array{length: int, type: string}>
      */
     private static array $methodSuffixMap = [
         'If' => ['length' => 2, 'type' => 'if'],
@@ -432,6 +440,8 @@ trait ErrorLog {
      * Magische Methode für Instanzmethoden (nicht-statisch)
      *
      * Unterstützt: log{Level}, log{Level}If, log{Level}Unless, log{Level}AndReturn, log{Level}WithTimer
+     *
+     * @param list<mixed> $arguments
      */
     public function __call(string $name, array $arguments): mixed {
         return self::handleMagicCall($name, $arguments);
@@ -441,6 +451,8 @@ trait ErrorLog {
      * Magische Methode für statische Methoden
      *
      * Unterstützt: log{Level}, log{Level}If, log{Level}Unless, log{Level}AndReturn, log{Level}WithTimer
+     *
+     * @param list<mixed> $arguments
      */
     public static function __callStatic(string $name, array $arguments): mixed {
         return self::handleMagicCall($name, $arguments);
@@ -448,6 +460,8 @@ trait ErrorLog {
 
     /**
      * Gemeinsame Implementierung für __call und __callStatic
+     *
+     * @param list<mixed> $arguments
      */
     private static function handleMagicCall(string $name, array $arguments): mixed {
         $parsed = self::parseMethodName($name);
@@ -470,6 +484,8 @@ trait ErrorLog {
 
     /**
      * Verarbeitet log{Level}Hex() Aufrufe.
+     *
+     * @param list<mixed> $arguments
      */
     private static function handleHexLog(string $level, array $arguments): null {
         $message = (string) ($arguments[0] ?? '');
@@ -487,13 +503,15 @@ trait ErrorLog {
 
     /**
      * Verarbeitet bedingte Log-Aufrufe (If/Unless)
+     *
+     * @param list<mixed> $arguments
      */
     private static function handleConditionalLog(bool $logWhenTrue, string $level, array $arguments): null {
         $condition = $arguments[0] ?? false;
         $shouldLog = $logWhenTrue ? $condition : !$condition;
 
         if ($shouldLog) {
-            self::logInternal($level, $arguments[1] ?? '', $arguments[2] ?? []);
+            self::logInternal($level, (string) ($arguments[1] ?? ''), self::normalizeContextArgument($arguments[2] ?? []));
         }
 
         return null;
@@ -501,15 +519,19 @@ trait ErrorLog {
 
     /**
      * Verarbeitet Log-and-Return Aufrufe
+     *
+     * @param list<mixed> $arguments
      */
     private static function handleLogAndReturn(string $level, array $arguments): mixed {
         $value = $arguments[0] ?? null;
-        self::logInternal($level, $arguments[1] ?? '', $arguments[2] ?? []);
+        self::logInternal($level, (string) ($arguments[1] ?? ''), self::normalizeContextArgument($arguments[2] ?? []));
         return $value;
     }
 
     /**
      * Verarbeitet Log-with-Timer Aufrufe
+     *
+     * @param list<mixed> $arguments
      */
     private static function handleLogWithTimer(string $level, array $arguments): mixed {
         $callback = $arguments[0] ?? null;
@@ -543,10 +565,21 @@ trait ErrorLog {
 
     /**
      * Verarbeitet Standard-Log Aufrufe
+     *
+     * @param list<mixed> $arguments
      */
     private static function handleStandardLog(string $level, array $arguments): null {
-        self::logInternal($level, $arguments[0] ?? '', $arguments[1] ?? []);
+        self::logInternal($level, (string) ($arguments[0] ?? ''), self::normalizeContextArgument($arguments[1] ?? []));
         return null;
+    }
+
+    /**
+     * Normalisiert ein Magic-Call-Argument zu einem Kontext-Array.
+     *
+     * @return array<string, mixed>
+     */
+    private static function normalizeContextArgument(mixed $context): array {
+        return is_array($context) ? $context : [];
     }
 
     // ========================================================================
@@ -559,6 +592,7 @@ trait ErrorLog {
      * @template T of Throwable
      * @param string $level PSR-3 Log-Level
      * @param class-string<T> $exceptionClass
+     * @param array<string, mixed> $context
      * @throws T
      */
     private static function doLogAndThrow(string $level, string $exceptionClass, string $message, array $context = [], ?Throwable $previous = null, int $code = 0): never {
@@ -571,6 +605,7 @@ trait ErrorLog {
      *
      * @template T of Throwable
      * @param class-string<T> $exceptionClass
+     * @param array<string, mixed> $context
      * @throws T
      */
     public static function logErrorAndThrow(string $exceptionClass, string $message, array $context = [], ?Throwable $previous = null, int $code = 0): never {
@@ -582,6 +617,7 @@ trait ErrorLog {
      *
      * @template T of Throwable
      * @param class-string<T> $exceptionClass
+     * @param array<string, mixed> $context
      * @throws T
      */
     public static function logCriticalAndThrow(string $exceptionClass, string $message, array $context = [], ?Throwable $previous = null, int $code = 0): never {
@@ -593,6 +629,7 @@ trait ErrorLog {
      *
      * @template T of Throwable
      * @param class-string<T> $exceptionClass
+     * @param array<string, mixed> $context
      * @throws T
      */
     public static function logAlertAndThrow(string $exceptionClass, string $message, array $context = [], ?Throwable $previous = null, int $code = 0): never {
@@ -604,6 +641,7 @@ trait ErrorLog {
      *
      * @template T of Throwable
      * @param class-string<T> $exceptionClass
+     * @param array<string, mixed> $context
      * @throws T
      */
     public static function logEmergencyAndThrow(string $exceptionClass, string $message, array $context = [], ?Throwable $previous = null, int $code = 0): never {

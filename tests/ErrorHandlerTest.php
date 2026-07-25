@@ -157,7 +157,7 @@ class ErrorHandlerTest extends TestCase {
     // ─── handleError: Context enthält Details ─────────────────────
 
     public function test_error_context_contains_file_and_line(): void {
-        $capturedContext = null;
+        $capturedContext = [];
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects($this->once())
             ->method('log')
@@ -190,7 +190,7 @@ class ErrorHandlerTest extends TestCase {
     }
 
     public function test_handle_exception_context_contains_details(): void {
-        $capturedContext = null;
+        $capturedContext = [];
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects($this->once())
             ->method('log')
@@ -207,7 +207,6 @@ class ErrorHandlerTest extends TestCase {
         $exception = new \InvalidArgumentException('Bad arg', 99);
         $handler->handleException($exception);
 
-        $this->assertNotNull($capturedContext);
         $this->assertSame('InvalidArgumentException', $capturedContext['exception']);
         $this->assertSame('Bad arg', $capturedContext['message']);
         $this->assertSame(99, $capturedContext['code']);

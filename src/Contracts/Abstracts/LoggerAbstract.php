@@ -51,6 +51,7 @@ abstract class LoggerAbstract implements LoggerInterface {
     protected int $duplicateCount = 0;
     protected ?string $lastLevel = null;
     protected ?string $lastMessage = null;
+    /** @var array<string, mixed> */
     protected array $lastContext = [];
     protected ?string $lastCaller = null;
 
@@ -139,6 +140,8 @@ abstract class LoggerAbstract implements LoggerInterface {
 
     /**
      * Erzeugt einen eindeutigen Schlüssel für einen Log-Eintrag zur Deduplizierung.
+     *
+     * @param array<string, mixed> $context
      */
     protected function createLogKey(string $level, string|Stringable $message, array $context): string {
         $contextKey = '';
@@ -346,6 +349,9 @@ abstract class LoggerAbstract implements LoggerInterface {
         $this->writeLog($logEntry, $level);
     }
 
+    /**
+     * @param array<string, mixed> $context
+     */
     protected function generateLogEntry(string $level, string|Stringable $message, array $context = [], ?string $caller = null): string {
         [$context, $includeMessageHex] = $this->extractInternalContextFlags($context);
         $context = static::redactSensitiveContext($context);
@@ -371,7 +377,8 @@ abstract class LoggerAbstract implements LoggerInterface {
     /**
      * Trennt interne Context-Flags vom auszugebenden Kontext.
      *
-     * @return array{0: array, 1: bool}
+     * @param array<string, mixed> $context
+     * @return array{0: array<string, mixed>, 1: bool}
      */
     protected function extractInternalContextFlags(array $context): array {
         $includeMessageHex = (bool) ($context[self::CONTEXT_KEY_MESSAGE_HEX] ?? false);
@@ -385,6 +392,9 @@ abstract class LoggerAbstract implements LoggerInterface {
      * (case-insensitive). Greift auch in verschachtelte Arrays (z. B. den
      * response_headers-Teilbaum), sodass Authorization/Set-Cookie/Token-Werte
      * nicht in die Log-Zeile serialisiert werden.
+     *
+     * @param array<array-key, mixed> $context
+     * @return array<array-key, mixed>
      */
     protected static function redactSensitiveContext(array $context): array {
         foreach ($context as $key => $value) {
@@ -412,6 +422,8 @@ abstract class LoggerAbstract implements LoggerInterface {
      * Interpoliert PSR-3 Platzhalter ({key}) in der Nachricht mit Kontext-Werten.
      * Kontext-Schlüssel mit "_"-Präfix (interne Flags) werden ignoriert;
      * ohne Platzhalter ist der Aufruf ein No-op.
+     *
+     * @param array<array-key, mixed> $context
      */
     public static function interpolate(string $message, array $context): string {
         if ($context === [] || !str_contains($message, '{')) {

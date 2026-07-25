@@ -66,6 +66,8 @@ class OsHelper {
 
     /**
      * Gibt den korrekten PATH-Separator für Umgebungsvariablen zurück.
+     *
+     * @return non-empty-string
      */
     public static function getEnvPathSeparator(): string {
         return self::isWindows() ? ';' : ':';
@@ -267,6 +269,8 @@ class OsHelper {
 
     /**
      * Gibt detaillierte System-Informationen zurück.
+     *
+     * @return array<string, mixed>
      */
     public static function getSystemInfo(): array {
         return [

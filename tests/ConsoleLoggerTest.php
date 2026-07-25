@@ -20,15 +20,22 @@ use Psr\Log\LogLevel;
 class ConsoleLoggerTest extends TestCase {
     /** @return resource */
     private static function createStream() {
-        return fopen('php://memory', 'r+');
+        $stream = fopen('php://memory', 'r+');
+        if ($stream === false) {
+            throw new \RuntimeException('Konnte keinen Memory-Stream öffnen.');
+        }
+        return $stream;
     }
 
+    /**
+     * @param resource $stream
+     */
     private static function readStream($stream): string {
         rewind($stream);
         return stream_get_contents($stream) ?: '';
     }
 
-    public function test_logs_info_level() {
+    public function test_logs_info_level(): void {
         $stream = self::createStream();
         $logger = new ConsoleLogger(LogLevel::INFO, stream: $stream);
 
@@ -62,7 +69,7 @@ class ConsoleLoggerTest extends TestCase {
         }
     }
 
-    public function test_does_not_log_below_threshold() {
+    public function test_does_not_log_below_threshold(): void {
         $stream = self::createStream();
         $logger = new ConsoleLogger(LogLevel::WARNING, enableDeduplication: false, stream: $stream);
 
@@ -72,7 +79,7 @@ class ConsoleLoggerTest extends TestCase {
         $this->assertSame("", $output, "Es sollte keine Ausgabe geben, da INFO unterhalb der WARNING-Schwelle liegt.");
     }
 
-    public function test_logs_critical_level() {
+    public function test_logs_critical_level(): void {
         $stream = self::createStream();
         $logger = new ConsoleLogger(LogLevel::DEBUG, enableDeduplication: false, stream: $stream);
 
@@ -92,7 +99,7 @@ class ConsoleLoggerTest extends TestCase {
         }
     }
 
-    public function test_logs_without_colors_when_not_supported() {
+    public function test_logs_without_colors_when_not_supported(): void {
         $stream = self::createStream();
         $logger = new ConsoleLogger(LogLevel::INFO, enableDeduplication: false, stream: $stream);
 
@@ -102,7 +109,7 @@ class ConsoleLoggerTest extends TestCase {
         $this->assertStringContainsString("Plain text message", $output);
     }
 
-    public function test_deduplication_prevents_duplicate_logs() {
+    public function test_deduplication_prevents_duplicate_logs(): void {
         $stream = self::createStream();
         $logger = new ConsoleLogger(LogLevel::INFO, enableDeduplication: true, stream: $stream);
 
@@ -120,7 +127,7 @@ class ConsoleLoggerTest extends TestCase {
         $this->assertSame(2, substr_count($output, "Duplicate message"));
     }
 
-    public function test_duplicate_summary_shows_original_caller() {
+    public function test_duplicate_summary_shows_original_caller(): void {
         $stream = self::createStream();
         $logger = new ConsoleLogger(LogLevel::INFO, enableDeduplication: true, stream: $stream);
 
@@ -154,7 +161,7 @@ class ConsoleLoggerTest extends TestCase {
         $logger->log(LogLevel::INFO, 'Flush trigger message');
     }
 
-    public function test_deduplication_writes_first_occurrence_immediately() {
+    public function test_deduplication_writes_first_occurrence_immediately(): void {
         $stream = self::createStream();
         $logger = new ConsoleLogger(LogLevel::INFO, enableDeduplication: true, stream: $stream);
 
@@ -165,7 +172,7 @@ class ConsoleLoggerTest extends TestCase {
         $this->assertStringContainsString("Instant message", $output);
     }
 
-    public function test_deduplication_allows_different_messages() {
+    public function test_deduplication_allows_different_messages(): void {
         $stream = self::createStream();
         $logger = new ConsoleLogger(LogLevel::INFO, enableDeduplication: true, stream: $stream);
 
@@ -182,7 +189,7 @@ class ConsoleLoggerTest extends TestCase {
         $this->assertStringNotContainsString("(x", $output);
     }
 
-    public function test_deduplication_can_be_disabled() {
+    public function test_deduplication_can_be_disabled(): void {
         $stream = self::createStream();
         $logger = new ConsoleLogger(LogLevel::INFO, enableDeduplication: false, stream: $stream);
         $this->assertFalse($logger->isDeduplicationEnabled());
@@ -197,7 +204,7 @@ class ConsoleLoggerTest extends TestCase {
         $this->assertStringNotContainsString("(x", $output);
     }
 
-    public function test_set_deduplication_flushes_on_disable() {
+    public function test_set_deduplication_flushes_on_disable(): void {
         $stream = self::createStream();
         $logger = new ConsoleLogger(LogLevel::INFO, enableDeduplication: true, stream: $stream);
 
@@ -212,7 +219,7 @@ class ConsoleLoggerTest extends TestCase {
         $this->assertStringContainsString("Repeated (x2)", $output);
     }
 
-    public function test_is_deduplication_enabled() {
+    public function test_is_deduplication_enabled(): void {
         $logger = new ConsoleLogger(LogLevel::INFO, enableDeduplication: true);
         $this->assertTrue($logger->isDeduplicationEnabled());
 

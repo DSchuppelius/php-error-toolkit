@@ -47,7 +47,11 @@ class ErrorHandler {
     /** Standard-Größe des Memory-Buffers in Bytes (10 KB) */
     private const MEMORY_RESERVE_SIZE = 10240;
 
-    /** Registrierte Callbacks pro LogLevel */
+    /**
+     * Registrierte Callbacks pro LogLevel
+     *
+     * @var array<string, list<callable(string, array<string, mixed>): void>>
+     */
     private array $listeners = [];
 
     /** Singleton-Guard: Aktive registrierte Instanz */
@@ -165,7 +169,7 @@ class ErrorHandler {
      * Registriert einen Callback der bei bestimmten Log-Levels aufgerufen wird.
      *
      * @param string $level PSR-3 LogLevel (z.B. LogLevel::CRITICAL)
-     * @param callable(string $message, array $context): void $callback
+     * @param callable(string, array<string, mixed>): void $callback
      */
     public function addListener(string $level, callable $callback): self {
         $this->listeners[$level][] = $callback;
@@ -333,6 +337,8 @@ class ErrorHandler {
 
     /**
      * Loggt eine Nachricht über den konfigurierten Logger.
+     *
+     * @param array<string, mixed> $context
      */
     private function log(string $level, string $message, array $context = []): void {
         $logger = $this->getLogger();
@@ -350,6 +356,8 @@ class ErrorHandler {
 
     /**
      * Benachrichtigt registrierte Listener für ein bestimmtes Log-Level.
+     *
+     * @param array<string, mixed> $context
      */
     private function notifyListeners(string $level, string $message, array $context): void {
         if (!isset($this->listeners[$level])) {
