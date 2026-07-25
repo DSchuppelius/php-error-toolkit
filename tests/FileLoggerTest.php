@@ -35,7 +35,7 @@ class FileLoggerTest extends TestCase {
         }
     }
 
-    public function test_logs_at_or_above_threshold() {
+    public function test_logs_at_or_above_threshold(): void {
         $logger = new FileLogger($this->testLogFile, LogLevel::WARNING, true, 5000000, true, enableDeduplication: false);
 
         $logger->log(LogLevel::INFO, "This is an info message");
@@ -44,26 +44,26 @@ class FileLoggerTest extends TestCase {
 
         $logger->log(LogLevel::ERROR, "This is an error message");
 
-        $logContent = file_get_contents($this->testLogFile);
+        $logContent = (string) file_get_contents($this->testLogFile);
 
         $this->assertStringNotContainsString("This is an info message", $logContent, "INFO sollte nicht geloggt werden, da unterhalb WARNING.");
         $this->assertStringContainsString("This is a warning message", $logContent, "WARNING sollte geloggt werden.");
         $this->assertStringContainsString("This is an error message", $logContent, "ERROR sollte geloggt werden.");
     }
 
-    public function test_uses_default_log_file_if_none_provided() {
+    public function test_uses_default_log_file_if_none_provided(): void {
         $logger = new FileLogger(null, LogLevel::DEBUG, true, 5000000, true, enableDeduplication: false);
         $logger->log(LogLevel::DEBUG, "Message in default file");
 
         $defaultLog = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'default.log';
 
         $this->assertFileExists($defaultLog, "Default-Logdatei sollte erstellt werden.");
-        $this->assertStringContainsString("Message in default file", file_get_contents($defaultLog));
+        $this->assertStringContainsString("Message in default file", (string) file_get_contents($defaultLog));
 
         unlink($defaultLog);
     }
 
-    public function test_file_creation_failure_throws_exception() {
+    public function test_file_creation_failure_throws_exception(): void {
         $nonWritableDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'no_write_' . uniqid();
         if (!mkdir($nonWritableDir) && !is_dir($nonWritableDir)) {
             $this->markTestSkipped("Konnte kein temporäres Verzeichnis erstellen, Test wird übersprungen.");
@@ -101,7 +101,7 @@ class FileLoggerTest extends TestCase {
         }
     }
 
-    public function test_write_failure_throws_exception() {
+    public function test_write_failure_throws_exception(): void {
         // Legt eine Logdatei an und entzieht die Schreibrechte, um den Schreibfehler zu simulieren.
         file_put_contents($this->testLogFile, "");
         chmod($this->testLogFile, 0400); // Nur Lese-Rechte
@@ -113,5 +113,71 @@ class FileLoggerTest extends TestCase {
 
         // Versucht in eine Datei zu schreiben, für die keine Schreibrechte bestehen
         $logger->log(LogLevel::ERROR, "Should fail");
+    }
+
+    /**
+     * Regression: Mehrere Rotationen innerhalb derselben Sekunde dürfen sich nicht
+     * gegenseitig überschreiben (der Archivname war zuvor nur sekundengenau).
+     */
+    public function test_rapid_rotation_does_not_lose_archives(): void {
+        $dir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'rot_' . uniqid();
+        mkdir($dir);
+        $logFile = $dir . DIRECTORY_SEPARATOR . 'app.log';
+
+        try {
+            // Kleine maxFileSize erzwingt viele Rotationen in derselben Sekunde;
+            // maxArchiveFiles=null hält alle Archive (isoliert den Kollisions-Effekt).
+            $logger = new FileLogger($logFile, LogLevel::DEBUG, true, 200, true, false, 0660, true, null);
+
+            $expected = 40;
+            for ($i = 0; $i < $expected; $i++) {
+                $logger->info("Zeile Nummer {$i} mit ausreichend Fülltext für schnelle Rotation");
+            }
+            $logger->flushDuplicates();
+
+            $archives = array_filter(
+                glob($logFile . '.*') ?: [],
+                fn (string $f): bool => preg_match('/\.\d{8}_\d{6}(?:_\d+)?$/', $f) === 1
+            );
+
+            $total = substr_count((string) file_get_contents($logFile), 'Zeile Nummer');
+            foreach ($archives as $archive) {
+                $total += substr_count((string) file_get_contents($archive), 'Zeile Nummer');
+            }
+
+            $this->assertSame($expected, $total, 'Rotation darf keine Log-Zeilen durch Archiv-Namenskollision verlieren.');
+            $this->assertGreaterThan(1, count($archives), 'Es sollten mehrere eindeutige Archive entstanden sein.');
+        } finally {
+            array_map('unlink', glob($dir . DIRECTORY_SEPARATOR . '*') ?: []);
+            @rmdir($dir);
+        }
+    }
+
+    /**
+     * Der Archiv-Cap (maxArchiveFiles) muss auch für Namen mit Zähler-Suffix greifen.
+     */
+    public function test_rotation_respects_archive_cap_with_suffixed_names(): void {
+        $dir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'rotcap_' . uniqid();
+        mkdir($dir);
+        $logFile = $dir . DIRECTORY_SEPARATOR . 'app.log';
+
+        try {
+            $logger = new FileLogger($logFile, LogLevel::DEBUG, true, 200, true, false, 0660, true, 3);
+
+            for ($i = 0; $i < 60; $i++) {
+                $logger->info("Fülltext Zeile {$i} xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+            }
+            $logger->flushDuplicates();
+
+            $archives = array_filter(
+                glob($logFile . '.*') ?: [],
+                fn (string $f): bool => preg_match('/\.\d{8}_\d{6}(?:_\d+)?$/', $f) === 1
+            );
+
+            $this->assertLessThanOrEqual(3, count($archives), 'maxArchiveFiles muss auch Suffix-Archive begrenzen.');
+        } finally {
+            array_map('unlink', glob($dir . DIRECTORY_SEPARATOR . '*') ?: []);
+            @rmdir($dir);
+        }
     }
 }

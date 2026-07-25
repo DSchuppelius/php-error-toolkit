@@ -19,6 +19,15 @@ use Psr\Log\LoggerInterface;
 class FileLoggerFactory implements LoggerFactoryInterface {
     protected static ?LoggerInterface $logger = null;
 
+    /**
+     * Gibt den prozessweiten FileLogger zurück (Singleton: "configure once").
+     *
+     * WICHTIG: Nur der ERSTE Aufruf konfiguriert den Logger. Die Parameter
+     * werden bei Folgeaufrufen bewusst ignoriert, damit ein einmal
+     * konfigurierter Logger überall via parameterlosem getLogger() wiederverwendet
+     * werden kann. Um mit anderen Parametern neu zu konfigurieren, zuvor
+     * {@see resetLogger()} aufrufen.
+     */
     public static function getLogger(?string $logfile = null, ?string $logLevel = null, bool $enableDeduplication = true): LoggerInterface {
         if (self::$logger === null) {
             self::$logger = new FileLogger($logfile, $logLevel ?? \Psr\Log\LogLevel::DEBUG, true, 5000000, true, $enableDeduplication);

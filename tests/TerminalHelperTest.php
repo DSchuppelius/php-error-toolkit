@@ -16,27 +16,27 @@ use ERRORToolkit\Helper\TerminalHelper;
 use PHPUnit\Framework\TestCase;
 
 class TerminalHelperTest extends TestCase {
-    public function test_is_debug_console() {
+    public function test_is_debug_console(): void {
         $this->expectNotToPerformAssertions();
         TerminalHelper::isDebugConsole();
     }
 
-    public function test_is_terminal() {
+    public function test_is_terminal(): void {
         $this->expectNotToPerformAssertions();
         TerminalHelper::isTerminal();
     }
 
-    public function test_supports_colors() {
+    public function test_supports_colors(): void {
         $this->expectNotToPerformAssertions();
         TerminalHelper::supportsColors();
     }
 
-    public function test_get_terminal_width() {
+    public function test_get_terminal_width(): void {
         $result = TerminalHelper::getTerminalWidth();
         $this->assertGreaterThan(0, $result);
     }
 
-    public function test_get_terminal_height() {
+    public function test_get_terminal_height(): void {
         $result = TerminalHelper::getTerminalHeight();
         $this->assertGreaterThan(0, $result);
     }

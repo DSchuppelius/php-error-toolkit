@@ -19,6 +19,13 @@ use Psr\Log\LoggerInterface;
 class ConsoleLoggerFactory implements LoggerFactoryInterface {
     protected static ?LoggerInterface $logger = null;
 
+    /**
+     * Gibt den prozessweiten ConsoleLogger zurück (Singleton: "configure once").
+     *
+     * WICHTIG: Nur der ERSTE Aufruf konfiguriert den Logger; Parameter bei
+     * Folgeaufrufen werden bewusst ignoriert. Zum Neukonfigurieren zuvor
+     * {@see resetLogger()} aufrufen.
+     */
     public static function getLogger(?string $logLevel = null, bool $enableDeduplication = true): LoggerInterface {
         if (self::$logger === null) {
             self::$logger = new ConsoleLogger($logLevel ?? \Psr\Log\LogLevel::DEBUG, $enableDeduplication);

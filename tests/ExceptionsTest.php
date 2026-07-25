@@ -23,6 +23,9 @@ class ExceptionsTest extends TestCase {
     /**
      * @return array<string, array{class-string<Throwable>}>
      */
+    /**
+     * @return array<string, array{class-string<\Throwable>}>
+     */
     public static function exceptionClassProvider(): array {
         return [
             'FileSystemException' => [FileSystemException::class],
@@ -44,18 +47,21 @@ class ExceptionsTest extends TestCase {
         $this->assertNull($exception->getPrevious());
     }
 
+    /** @param class-string<\Throwable> $exceptionClass */
     #[DataProvider('exceptionClassProvider')]
     public function test_exception_with_message(string $exceptionClass): void {
         $exception = new $exceptionClass('Testfehler');
         $this->assertSame('Testfehler', $exception->getMessage());
     }
 
+    /** @param class-string<\Throwable> $exceptionClass */
     #[DataProvider('exceptionClassProvider')]
     public function test_exception_with_code(string $exceptionClass): void {
         $exception = new $exceptionClass('Fehler', 42);
         $this->assertSame(42, $exception->getCode());
     }
 
+    /** @param class-string<\Throwable> $exceptionClass */
     #[DataProvider('exceptionClassProvider')]
     public function test_exception_with_previous(string $exceptionClass): void {
         $previous = new RuntimeException('Ursache');
@@ -63,6 +69,7 @@ class ExceptionsTest extends TestCase {
         $this->assertSame($previous, $exception->getPrevious());
     }
 
+    /** @param class-string<\Throwable> $exceptionClass */
     #[DataProvider('exceptionClassProvider')]
     public function test_exception_accepts_throwable_as_previous(string $exceptionClass): void {
         // Throwable statt nur Exception - das ist der Fix den wir gemacht haben
@@ -71,6 +78,7 @@ class ExceptionsTest extends TestCase {
         $this->assertSame($previous, $exception->getPrevious());
     }
 
+    /** @param class-string<\Throwable> $exceptionClass */
     #[DataProvider('exceptionClassProvider')]
     public function test_exception_is_throwable(string $exceptionClass): void {
         try {

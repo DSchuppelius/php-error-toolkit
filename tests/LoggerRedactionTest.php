@@ -19,14 +19,24 @@ use Psr\Log\LogLevel;
 class LoggerRedactionTest extends TestCase {
     /** @return resource */
     private static function createStream() {
-        return fopen('php://memory', 'r+');
+        $stream = fopen('php://memory', 'r+');
+        if ($stream === false) {
+            throw new \RuntimeException('Konnte keinen Memory-Stream öffnen.');
+        }
+        return $stream;
     }
 
+    /**
+     * @param resource $stream
+     */
     private static function readStream($stream): string {
         rewind($stream);
         return stream_get_contents($stream) ?: '';
     }
 
+    /**
+     * @param resource $stream
+     */
     private function logger($stream): ConsoleLogger {
         return new ConsoleLogger(LogLevel::DEBUG, enableDeduplication: false, stream: $stream);
     }

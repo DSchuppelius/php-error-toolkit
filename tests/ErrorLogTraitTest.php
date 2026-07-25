@@ -53,7 +53,11 @@ class ErrorLogTraitTest extends TestCase {
 
     protected function setUp(): void {
         $this->testInstance = new ErrorLogTestClass;
-        $this->stream = fopen('php://memory', 'r+');
+        $stream = fopen('php://memory', 'r+');
+        if ($stream === false) {
+            $this->fail('Konnte keinen Memory-Stream öffnen.');
+        }
+        $this->stream = $stream;
         // Logger auf DEBUG setzen um alle Nachrichten zu erfassen
         // Deduplizierung deaktivieren für sofortige Ausgabe in Tests
         $logger = new ConsoleLogger(LogLevel::DEBUG, enableDeduplication: false, stream: $this->stream);
@@ -814,6 +818,8 @@ class ErrorLogTraitTest extends TestCase {
 
     /**
      * Wrapper-Methode zum Testen des externen Callers
+     *
+     * @return array<string, mixed>
      */
     private function wrapperMethodForDebugContext(): array {
         return ErrorLogTestClass::createDebugContext(['extra' => 'data']);
@@ -851,6 +857,8 @@ class ErrorLogTraitTest extends TestCase {
 
     /**
      * Simuliert einen externen Bibliotheksaufruf
+     *
+     * @return array<string, mixed>
      */
     private function simulateExternalLibraryCall(): array {
         return ErrorLogTestClass::createDebugContext();
@@ -869,10 +877,16 @@ class ErrorLogTraitTest extends TestCase {
         $this->assertSame('innerMethod', $debug['function']);
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function outerMethod(): array {
         return $this->innerMethod();
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function innerMethod(): array {
         return ErrorLogTestClass::createDebugContext();
     }
