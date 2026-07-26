@@ -90,13 +90,13 @@ class TerminalHelper {
             return 0;
         }
 
-        // Benötigt shell_exec/Backticks und system(); auf gehärteten Hosts nicht verfügbar.
+        // Benötigt shell_exec() und system(); auf gehärteten Hosts nicht verfügbar.
         if (!OsHelper::canExecuteShellCommands()) {
             return 0;
         }
 
-        // Terminal-Einstellungen speichern
-        $ttyProps = trim(`stty -g 2>/dev/null`);
+        // Terminal-Einstellungen speichern (kein Backtick-Operator: seit PHP 8.5 deprecated)
+        $ttyProps = trim(shell_exec('stty -g 2>/dev/null') ?: '');
         if (empty($ttyProps)) {
             return 0;
         }
