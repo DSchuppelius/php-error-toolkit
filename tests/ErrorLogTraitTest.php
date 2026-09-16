@@ -962,6 +962,34 @@ class ErrorLogTraitTest extends TestCase {
     }
 
     /**
+     * Test: Der Fallback (kein Logger registriert) unterdrückt Debug/Info —
+     * die Diagnostik flutete sonst jeden nackten CLI-Aufruf mit seitenweisem
+     * ClassLoader-/ConfigLoader-Echo auf STDERR. Notice und schwerer kommen
+     * weiterhin durch; wer Debug will, registriert einen Logger.
+     */
+    public function test_fallback_logging_suppresses_debug_and_info(): void {
+        LoggerRegistry::resetLogger();
+
+        $logFile = tempnam(sys_get_temp_dir(), 'etk_fallback_');
+        $this->assertNotFalse($logFile);
+        ini_set('error_log', $logFile);
+
+        try {
+            ErrorLogFallbackTestClass::logDebug('debug soll verschwinden');
+            ErrorLogFallbackTestClass::logInfo('info soll verschwinden');
+            ErrorLogFallbackTestClass::logNotice('notice bleibt sichtbar');
+            $output = (string) file_get_contents($logFile);
+        } finally {
+            ini_restore('error_log');
+            @unlink($logFile);
+        }
+
+        $this->assertStringNotContainsString('debug soll verschwinden', $output);
+        $this->assertStringNotContainsString('info soll verschwinden', $output);
+        $this->assertStringContainsString('notice bleibt sichtbar', $output);
+    }
+
+    /**
      * Test: Ein Registry-Wechsel (neue Framework-App-Instanz im selben
      * Prozess: PHPUnit-Feature-Tests, Octane, Queue-Worker) muss beim
      * nächsten Log-Aufruf greifen — der Trait darf den zuvor über die

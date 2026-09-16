@@ -238,6 +238,12 @@ trait ErrorLog {
     /**
      * Fallback-Logging, wenn kein Logger registriert ist.
      *
+     * Nur NOTICE und schwerer: Debug-/Info-Diagnostik ergibt ohne konfigurierten
+     * Logger keinen Sinn — sie flutete jeden nackten CLI-Aufruf (php -r,
+     * Composer-Skripte) mit seitenweisem ClassLoader-/ConfigLoader-Echo auf
+     * STDERR und verdeckte echte Meldungen. Wer die Diagnostik will,
+     * registriert einen Logger mit DEBUG-Level (LoggerRegistry::setLogger()).
+     *
      * Enthält wie die echten Logger den Caller, damit die Quelle des Eintrags
      * sichtbar bleibt. Im CLI wird direkt eine atomare Zeile nach STDERR
      * geschrieben; syslog nur noch ohne LOG_PERROR, denn dessen ungepuffertes
@@ -245,6 +251,10 @@ trait ErrorLog {
      * zerschreibt Log-Zeilen.
      */
     private static function logFallback(string $level, string $message): void {
+        if (self::getSyslogLevel($level) > LOG_NOTICE) {
+            return; // Info/Debug ohne registrierten Logger unterdrücken
+        }
+
         $caller = LoggerAbstract::getExternalCaller();
         $callerString = $caller['class'] !== null ? "{$caller['class']}::{$caller['function']}()" : $caller['function'];
 
