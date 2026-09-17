@@ -19,6 +19,9 @@ A PSR-3 compliant logging library built for PHP 8.1+ with a focus on console and
 - 🔧 **OS Helper** - Cross-platform system detection and utilities
 - 🎨 **Cross-Platform** - Windows, Linux and macOS terminal support
 - 🧪 **Fully Tested** - Comprehensive test suite with PHPUnit
+- 🔌 **Laravel Bridge** - auto-discovered `ErrorToolkitServiceProvider` routes toolkit logs into a Laravel log channel (`ERROR_TOOLKIT_LOG_CHANNEL`, see `config/error-toolkit.php`)
+- 🧩 **Custom Resolver** - `LoggerRegistry::setLoggerResolver()` injects a closure that resolves the logger lazily, for hosts that build it from their own container
+- 🗄️ **Archive Limit** - `FileLogger` keeps at most `maxArchiveFiles` rotated files (default 10; `null` keeps all)
 
 ## Installation
 
@@ -642,3 +645,7 @@ Daniel Jörg Schuppelius
 ## Contributing
 
 This is a personal toolkit for Daniel Schuppelius's projects. For bugs or feature requests, please open an issue.
+
+## Versions
+
+Releases are tagged in Git; `git tag --sort=-v:refname` lists them (latest: v2.7.3). There is no separate changelog file — the tags and the commit history are the record.
