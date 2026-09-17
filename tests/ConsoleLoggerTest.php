@@ -40,10 +40,10 @@ class ConsoleLoggerTest extends TestCase {
         $logger = new ConsoleLogger(LogLevel::INFO, stream: $stream);
 
         // Diese Zeilen werden direkt auf der Konsole angezeigt (Deduplizierung aktiv)
-        // Line 1 → gepuffert
-        // Line 2 → Line 1 ausgegeben, Line 2 gepuffert
-        // Line 2 → Duplikat, Zähler +1
-        // Line 3 → Line 2 (x2) ausgegeben, Line 3 gepuffert
+        // Line 1 -> gepuffert
+        // Line 2 -> Line 1 ausgegeben, Line 2 gepuffert
+        // Line 2 -> Duplikat, Zähler +1
+        // Line 3 -> Line 2 (x2) ausgegeben, Line 3 gepuffert
         $logger->log(LogLevel::INFO, "Multiline Test: Line 1 - This is an info message");
         $logger->log(LogLevel::INFO, "Multiline Test: Line 2 - This is an info message");
         $logger->log(LogLevel::INFO, "Multiline Test: Line 2 - This is an info message");

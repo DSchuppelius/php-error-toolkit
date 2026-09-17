@@ -33,7 +33,7 @@ class ErrorHandlerTest extends TestCase {
         LoggerRegistry::resetLogger();
     }
 
-    // ─── createUnregistered ───────────────────────────────────────
+    // --- createUnregistered ---------------------------------------
 
     public function test_create_unregistered_returns_instance(): void {
         $handler = ErrorHandler::createUnregistered(new NullLogger);
@@ -41,7 +41,7 @@ class ErrorHandlerTest extends TestCase {
         $this->assertFalse($handler->isRegistered());
     }
 
-    // ─── handleError: Logging ─────────────────────────────────────
+    // --- handleError: Logging -------------------------------------
 
     public function test_warning_is_logged_as_warning(): void {
         $logger = $this->createMockLogger(LogLevel::WARNING, '[E_WARNING]');
@@ -85,7 +85,7 @@ class ErrorHandlerTest extends TestCase {
         $handler->handleError(E_USER_DEPRECATED, 'User deprecated', __FILE__, __LINE__);
     }
 
-    // ─── handleError: error_reporting() Respekt ───────────────────
+    // --- handleError: error_reporting() Respekt -------------------
 
     public function test_suppressed_error_is_not_logged(): void {
         $logger = $this->createMock(LoggerInterface::class);
@@ -109,7 +109,7 @@ class ErrorHandlerTest extends TestCase {
         $this->assertTrue($result);
     }
 
-    // ─── handleError: throwOnWarning ──────────────────────────────
+    // --- handleError: throwOnWarning ------------------------------
 
     public function test_throw_on_warning_throws_error_exception(): void {
         $handler = ErrorHandler::createUnregistered(new NullLogger, throwOnWarning: true);
@@ -134,7 +134,7 @@ class ErrorHandlerTest extends TestCase {
         $this->assertTrue($result);
     }
 
-    // ─── handleError: Immer-werfen bei E_USER_ERROR / E_RECOVERABLE_ERROR ─
+    // --- handleError: Immer-werfen bei E_USER_ERROR / E_RECOVERABLE_ERROR -
 
     public function test_user_error_always_throws(): void {
         $handler = ErrorHandler::createUnregistered(new NullLogger);
@@ -154,7 +154,7 @@ class ErrorHandlerTest extends TestCase {
         $handler->handleError(E_RECOVERABLE_ERROR, 'Recoverable error', __FILE__, __LINE__);
     }
 
-    // ─── handleError: Context enthält Details ─────────────────────
+    // --- handleError: Context enthält Details ---------------------
 
     public function test_error_context_contains_file_and_line(): void {
         $capturedContext = [];
@@ -179,7 +179,7 @@ class ErrorHandlerTest extends TestCase {
         $this->assertSame('E_WARNING', $capturedContext['severity_name']);
     }
 
-    // ─── handleException ──────────────────────────────────────────
+    // --- handleException ------------------------------------------
 
     public function test_handle_exception_logs_critical(): void {
         $logger = $this->createMockLogger(LogLevel::CRITICAL, 'Nicht-gefangene Exception');
@@ -213,7 +213,7 @@ class ErrorHandlerTest extends TestCase {
         $this->assertArrayHasKey('trace', $capturedContext);
     }
 
-    // ─── handleShutdown ───────────────────────────────────────────
+    // --- handleShutdown -------------------------------------------
 
     public function test_handle_shutdown_with_no_error_does_nothing(): void {
         $logger = $this->createMock(LoggerInterface::class);
@@ -228,13 +228,13 @@ class ErrorHandlerTest extends TestCase {
         }
     }
 
-    // ─── Logger Fallback ──────────────────────────────────────────
+    // --- Logger Fallback ------------------------------------------
 
     public function test_falls_back_to_logger_registry(): void {
         $logger = $this->createMockLogger(LogLevel::WARNING, '[E_WARNING]');
         LoggerRegistry::setLogger($logger);
 
-        // Kein Logger übergeben → nutzt LoggerRegistry
+        // Kein Logger übergeben -> nutzt LoggerRegistry
         $handler = ErrorHandler::createUnregistered();
 
         $handler->handleError(E_WARNING, 'Registry fallback', __FILE__, __LINE__);
@@ -246,11 +246,11 @@ class ErrorHandlerTest extends TestCase {
         LoggerRegistry::resetLogger();
         $handler = ErrorHandler::createUnregistered();
 
-        // error_log() Fallback → kein Crash erwartet
+        // error_log() Fallback -> kein Crash erwartet
         $handler->handleError(E_NOTICE, 'No logger available', __FILE__, __LINE__);
     }
 
-    // ─── Integration: register/unregister (separater Prozess) ─────
+    // --- Integration: register/unregister (separater Prozess) -----
 
     #[RunInSeparateProcess]
     public function test_register_and_unregister_lifecycle(): void {
@@ -305,7 +305,7 @@ class ErrorHandlerTest extends TestCase {
         $handler->unregister();
     }
 
-    // ─── Mehrfach-Registrierung ─────────────────────────────────
+    // --- Mehrfach-Registrierung ---------------------------------
 
     #[RunInSeparateProcess]
     public function test_double_register_throws_logic_exception(): void {
@@ -338,7 +338,7 @@ class ErrorHandlerTest extends TestCase {
         $this->assertNull(ErrorHandler::getActiveInstance());
     }
 
-    // ─── Listener/Callback-System ─────────────────────────────────
+    // --- Listener/Callback-System ---------------------------------
 
     public function test_listener_is_called_on_matching_level(): void {
         $called = false;
@@ -367,7 +367,7 @@ class ErrorHandlerTest extends TestCase {
             $called = true;
         });
 
-        // E_WARNING → LogLevel::WARNING, nicht CRITICAL
+        // E_WARNING -> LogLevel::WARNING, nicht CRITICAL
         $handler->handleError(E_WARNING, 'No listener expected', __FILE__, __LINE__);
 
         $this->assertFalse($called, 'Listener sollte nicht aufgerufen werden');
@@ -426,7 +426,7 @@ class ErrorHandlerTest extends TestCase {
         $this->assertSame($handler, $result);
     }
 
-    // ─── exitOnException ──────────────────────────────────────────
+    // --- exitOnException ------------------------------------------
 
     public function test_exit_on_exception_default_false_for_unregistered(): void {
         $this->expectNotToPerformAssertions();
@@ -435,11 +435,11 @@ class ErrorHandlerTest extends TestCase {
         $handler = ErrorHandler::createUnregistered(new NullLogger);
         $exception = new \RuntimeException('No exit');
 
-        // Sollte NICHT exit() aufrufen → einfach zurückkehren (kein Exit = Erfolg)
+        // Sollte NICHT exit() aufrufen -> einfach zurückkehren (kein Exit = Erfolg)
         $handler->handleException($exception);
     }
 
-    // ─── Hilfsmethoden ────────────────────────────────────────────
+    // --- Hilfsmethoden --------------------------------------------
 
     private function createMockLogger(string $expectedLevel, string $messageContains): LoggerInterface {
         $logger = $this->createMock(LoggerInterface::class);

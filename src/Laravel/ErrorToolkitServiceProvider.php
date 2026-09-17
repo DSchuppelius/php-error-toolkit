@@ -56,13 +56,13 @@ class ErrorToolkitServiceProvider extends ServiceProvider {
         // (no Laravel app) running after a feature test in the same process.
         // Resolving against a dead container throws ("Class 'log' does not
         // exist"). Therefore: always resolve against the CURRENT container,
-        // and fail soft (null → ErrorLog fallback) instead of throwing.
+        // and fail soft (null -> ErrorLog fallback) instead of throwing.
         LoggerRegistry::setLoggerResolver(function (): ?LoggerInterface {
             // Container::getInstance() always returns a container; if no 'log'
             // is bound (no Laravel app / flushed container) we fail soft.
             $app = Container::getInstance();
             if (!$app->bound('log')) {
-                return null; // container gone or flushed → fallback logging
+                return null; // container gone or flushed -> fallback logging
             }
 
             try {

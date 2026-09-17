@@ -20,9 +20,9 @@ use Throwable;
  * Globaler Error-Handler für PHP-Fehler, nicht-gefangene Exceptions und fatale Fehler.
  *
  * Registriert:
- * - set_error_handler()          → Fängt Warnings, Notices, Deprecations ab
- * - set_exception_handler()      → Fängt nicht-gefangene Exceptions ab
- * - register_shutdown_function() → Fängt fatale Fehler ab (E_ERROR, E_PARSE, E_CORE_ERROR, etc.)
+ * - set_error_handler()          -> Fängt Warnings, Notices, Deprecations ab
+ * - set_exception_handler()      -> Fängt nicht-gefangene Exceptions ab
+ * - register_shutdown_function() -> Fängt fatale Fehler ab (E_ERROR, E_PARSE, E_CORE_ERROR, etc.)
  *
  * Nutzung:
  *   $handler = ErrorHandler::register($logger);
@@ -57,7 +57,7 @@ class ErrorHandler {
     /** Singleton-Guard: Aktive registrierte Instanz */
     private static ?self $activeInstance = null;
 
-    /** Error-Severity → PSR-3 LogLevel Mapping */
+    /** Error-Severity -> PSR-3 LogLevel Mapping */
     private const SEVERITY_MAP = [
         E_ERROR => LogLevel::CRITICAL,
         E_WARNING => LogLevel::WARNING,
@@ -75,7 +75,7 @@ class ErrorHandler {
         E_USER_DEPRECATED => LogLevel::NOTICE,
     ];
 
-    /** Error-Severity → Menschenlesbarer Name */
+    /** Error-Severity -> Menschenlesbarer Name */
     private const SEVERITY_NAMES = [
         E_ERROR => 'E_ERROR',
         E_WARNING => 'E_WARNING',
