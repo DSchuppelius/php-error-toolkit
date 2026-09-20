@@ -1,14 +1,21 @@
 {
     "name": "dschuppelius/php-error-toolkit",
     "description": "Logging and error handling foundation for the Schuppelius PHP toolkits (PSR-3 loggers, global error handler, LoggerRegistry, Laravel bridge)",
+    "homepage": "https://github.com/DSchuppelius/php-error-toolkit",
     "type": "library",
     "license": "MIT",
     "authors": [
         {
             "name": "Daniel Joerg Schuppelius",
-            "email": "info@schuppelius.org"
+            "email": "info@schuppelius.org",
+            "homepage": "https://schuppelius.org",
+            "role": "Developer"
         }
     ],
+    "support": {
+        "issues": "https://github.com/DSchuppelius/php-error-toolkit/issues",
+        "source": "https://github.com/DSchuppelius/php-error-toolkit"
+    },
     "prefer-stable": true,
     "config": {
         "platform": {
