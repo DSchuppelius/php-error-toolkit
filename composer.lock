@@ -286,7 +286,7 @@
         },
         {
             "name": "illuminate/collections",
-            "version": "v12.69.2",
+            "version": "v12.69.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/illuminate/collections.git",
@@ -346,7 +346,7 @@
         },
         {
             "name": "illuminate/conditionable",
-            "version": "v12.69.2",
+            "version": "v12.69.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/illuminate/conditionable.git",
@@ -392,7 +392,7 @@
         },
         {
             "name": "illuminate/container",
-            "version": "v12.69.2",
+            "version": "v12.69.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/illuminate/container.git",
@@ -454,7 +454,7 @@
         },
         {
             "name": "illuminate/contracts",
-            "version": "v12.69.2",
+            "version": "v12.69.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/illuminate/contracts.git",
@@ -502,7 +502,7 @@
         },
         {
             "name": "illuminate/macroable",
-            "version": "v12.69.2",
+            "version": "v12.69.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/illuminate/macroable.git",
@@ -548,7 +548,7 @@
         },
         {
             "name": "illuminate/reflection",
-            "version": "v12.69.2",
+            "version": "v12.69.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/illuminate/reflection.git",
@@ -599,16 +599,16 @@
         },
         {
             "name": "illuminate/support",
-            "version": "v12.69.2",
+            "version": "v12.69.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/illuminate/support.git",
-                "reference": "7d7a7d2dc5084aa4b1fd8b0a42094e1d3fb51e00"
+                "reference": "0ae65f419c69a3bb5f8100b9c5286354742e7ef8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/illuminate/support/zipball/7d7a7d2dc5084aa4b1fd8b0a42094e1d3fb51e00",
-                "reference": "7d7a7d2dc5084aa4b1fd8b0a42094e1d3fb51e00",
+                "url": "https://api.github.com/repos/illuminate/support/zipball/0ae65f419c69a3bb5f8100b9c5286354742e7ef8",
+                "reference": "0ae65f419c69a3bb5f8100b9c5286354742e7ef8",
                 "shasum": ""
             },
             "require": {
@@ -675,7 +675,7 @@
                 "issues": "https://github.com/laravel/framework/issues",
                 "source": "https://github.com/laravel/framework"
             },
-            "time": "2026-08-06T14:28:07+00:00"
+            "time": "2026-09-28T00:20:42+00:00"
         },
         {
             "name": "laravel/pint",
@@ -809,16 +809,16 @@
         },
         {
             "name": "nesbot/carbon",
-            "version": "3.14.0",
+            "version": "3.14.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/CarbonPHP/carbon.git",
-                "reference": "0023eaa2c9110e47446dd512a263c69c40cd41f2"
+                "reference": "34e9109535165bf1d7ff17a610492372ae73a896"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/CarbonPHP/carbon/zipball/0023eaa2c9110e47446dd512a263c69c40cd41f2",
-                "reference": "0023eaa2c9110e47446dd512a263c69c40cd41f2",
+                "url": "https://api.github.com/repos/CarbonPHP/carbon/zipball/34e9109535165bf1d7ff17a610492372ae73a896",
+                "reference": "34e9109535165bf1d7ff17a610492372ae73a896",
                 "shasum": ""
             },
             "require": {
@@ -910,7 +910,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-09-12T20:45:19+00:00"
+            "time": "2026-09-27T12:07:26+00:00"
         },
         {
             "name": "nikic/php-parser",
@@ -1164,11 +1164,11 @@
         },
         {
             "name": "phpstan/phpstan",
-            "version": "2.2.14",
+            "version": "2.2.16",
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/9c672e7a8e791dfc3d30e55f683e73fc0b63a3ac",
-                "reference": "9c672e7a8e791dfc3d30e55f683e73fc0b63a3ac",
+                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/46a6d9060e5a7763adfcc21ebcb8b504ebdbcb92",
+                "reference": "46a6d9060e5a7763adfcc21ebcb8b504ebdbcb92",
                 "shasum": ""
             },
             "require": {
@@ -1224,7 +1224,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-09-12T21:39:33+00:00"
+            "time": "2026-09-25T09:31:51+00:00"
         },
         {
             "name": "phpunit/php-code-coverage",
@@ -3901,5 +3901,5 @@
     "platform-overrides": {
         "php": "8.2.0"
     },
-    "plugin-api-version": "2.6.0"
+    "plugin-api-version": "2.9.0"
 }
