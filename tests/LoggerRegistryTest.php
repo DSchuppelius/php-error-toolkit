@@ -69,8 +69,10 @@ class LoggerRegistryTest extends TestCase {
         });
 
         $this->assertSame(0, $calls, 'Resolver must not run before the first getLogger() call');
-        $this->assertSame($logger, LoggerRegistry::getLogger());
-        $this->assertSame($logger, LoggerRegistry::getLogger());
+        $first = LoggerRegistry::getLogger();
+        $second = LoggerRegistry::getLogger();
+        $this->assertSame($logger, $first);
+        $this->assertSame($logger, $second);
         // Resolver results are deliberately NOT cached: re-resolving on every
         // call keeps the logger bound to the CURRENT container, so a flushed
         // application (a plain PHPUnit test after a feature test in the same
