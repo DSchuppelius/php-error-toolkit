@@ -1,6 +1,6 @@
 # PHP Error Toolkit
 
-[![PHP Version](https://img.shields.io/badge/PHP-8.1--8.4-blue.svg)](https://www.php.net/)
+[![PHP Version](https://img.shields.io/badge/PHP-8.1--8.5-blue.svg)](https://www.php.net/)
 [![PSR-3 Compliant](https://img.shields.io/badge/PSR--3-Compliant-green.svg)](https://www.php-fig.org/psr/psr-3/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -33,7 +33,7 @@ composer require dschuppelius/php-error-toolkit
 
 ## Requirements
 
-- PHP 8.1 to 8.4
+- PHP 8.1 to 8.5
 - PSR-3 Log Interface
 
 ## Quick Start
@@ -359,7 +359,7 @@ class ValidationService {
         
         if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
             // With context array
-            $this->logWarningAndThrow(
+            $this->logErrorAndThrow(
                 InvalidArgumentException::class,
                 'Invalid email format',
                 ['email' => $data['email']]
@@ -409,9 +409,12 @@ log{Level}AndThrow(
     string $exceptionClass,    // Exception class to throw (e.g., RuntimeException::class)
     string $message,           // Error message (used for both log and exception)
     array $context = [],       // Optional: Context array for logging
-    ?Throwable $previous = null // Optional: Previous exception for chaining
+    ?Throwable $previous = null, // Optional: Previous exception for chaining
+    int $code = 0              // Optional: Exception code
 ): never
 ```
+
+There is no `logWarningAndThrow()` (or any level below ERROR): calling it throws a `BadMethodCallException`.
 
 ### Logger Management
 
@@ -425,7 +428,7 @@ class MyService {
     use ErrorLog;
     
     public function __construct() {
-        // Set a specific logger for this class
+        // Set a logger - note: this also registers it globally (LoggerRegistry::setLogger())
         self::setLogger(FileLoggerFactory::getLogger('service.log'));
         
         // Or use global logger from registry (automatic fallback)
@@ -434,9 +437,14 @@ class MyService {
 }
 ```
 
+`FileLoggerFactory::getLogger()` is a process-wide singleton ("configure once"): only the first call configures
+the file, later calls return the same logger and ignore their arguments. For a separate file, call
+`FileLoggerFactory::resetLogger()` first or create `new FileLogger(...)` directly.
+
 ### Automatic Project Detection
 
-The trait automatically detects project names from class namespaces:
+The trait derives a project name from the first namespace segment of the calling class. It is only used as the
+syslog ident and for the name of the fallback temp file (see below); log entries name the full calling class:
 
 ```php
 namespace MyCompany\ProjectName\Services;
@@ -447,8 +455,9 @@ class UserService {
     use ErrorLog;
     
     public function process() {
-        // Project name "MyCompany" is automatically detected
-        // Log entry: [2025-12-29 10:30:00] info [MyCompany::UserService::process()]: Processing user
+        // Project name "MyCompany" (syslog ident / fallback file)
+        // Log entry: [2025-12-29 10:30:00] info [MyCompany\ProjectName\Services\UserService::process()]: Processing user
+        // At logger level DEBUG the caller also carries " in <file>:<line>".
         $this->logInfo('Processing user');
     }
 }
@@ -456,12 +465,14 @@ class UserService {
 
 ### Fallback Logging System
 
-When no logger is available, the trait provides intelligent fallbacks:
+When no logger is available, the trait provides intelligent fallbacks. Without a logger only NOTICE and more
+severe messages are written; DEBUG and INFO are dropped.
 
 1. **Primary**: Uses configured PSR-3 logger
-2. **Fallback 1**: PHP error_log() if configured
-3. **Fallback 2**: System syslog with project-specific facility
-4. **Fallback 3**: File logging to system temp directory
+2. **Fallback 1**: PHP error_log() if the `error_log` ini setting is set
+3. **Fallback 2**: STDERR on the command line (CLI)
+4. **Fallback 3**: System syslog (ident = project name)
+5. **Fallback 4**: File `php-error-toolkit-<hash>.log` in the system temp directory (mode 0600)
 
 ```php
 class EmergencyService {
@@ -469,7 +480,7 @@ class EmergencyService {
     
     public function criticalOperation() {
         // Even without explicit logger setup, this will work
-        // Falls back through: error_log → syslog → temp file
+        // Falls back through: error_log → STDERR (CLI) → syslog → temp file
         self::logEmergency('System failure detected');
     }
 }
@@ -524,13 +535,15 @@ $logger->warning('This will be logged');
 
 ```php
 use ERRORToolkit\Logger\FileLogger;
+use Psr\Log\LogLevel;
 
 $logger = new FileLogger(
     logFile: '/var/log/app.log',
     logLevel: LogLevel::INFO,
-    failSafe: true,           // Fallback to console/syslog on file errors
+    failSafe: true,           // Fallback to the temp directory if the log directory is not writable
     maxFileSize: 5000000,     // 5MB before rotation
-    rotateLogs: true          // Create .old backup when rotating
+    rotateLogs: true,         // Archive as <file>.YYYYmmdd_HHMMSS when rotating
+    maxArchiveFiles: 10       // Keep at most 10 archives (null = unlimited)
 );
 ```
 
