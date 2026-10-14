@@ -12,8 +12,9 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use ERRORToolkit\Helper\OsHelper;
+use ERRORToolkit\Helper\{OsHelper, ProcessHelper};
 use PHPUnit\Framework\TestCase;
+use ReflectionMethod;
 
 class OsHelperTest extends TestCase {
     public function test_is_windows_matches_php_os(): void {
@@ -100,6 +101,50 @@ class OsHelperTest extends TestCase {
     public function test_get_cpu_core_count_returns_positive(): void {
         $cores = OsHelper::getCpuCoreCount();
         $this->assertGreaterThanOrEqual(1, $cores);
+    }
+
+    public function test_get_cpu_core_count_matches_nproc_on_linux(): void {
+        $nproc = OsHelper::isLinux() ? ProcessHelper::output(['nproc']) : null;
+        if ($nproc === null) {
+            $this->markTestSkipped('nproc nur unter Linux mit coreutils.');
+        }
+
+        $this->assertSame((int) trim($nproc), OsHelper::getCpuCoreCount());
+    }
+
+    public function test_count_cpu_list_reads_linux_ranges(): void {
+        $count = new ReflectionMethod(OsHelper::class, 'countCpuList');
+
+        $this->assertSame(7, $count->invoke(null, '0-3,6,8-9'));
+        $this->assertSame(1, $count->invoke(null, '0'));
+        $this->assertSame(64, $count->invoke(null, '0-63'));
+        $this->assertNull($count->invoke(null, ''));
+        $this->assertNull($count->invoke(null, '0-3,x'));
+    }
+
+    public function test_open_mp_variables_limit_the_core_count_like_nproc(): void {
+        $limits = new ReflectionMethod(OsHelper::class, 'applyOpenMpLimits');
+        $saved = [getenv('OMP_NUM_THREADS'), getenv('OMP_THREAD_LIMIT')];
+        unset($_SERVER['OMP_NUM_THREADS'], $_SERVER['OMP_THREAD_LIMIT']);
+
+        try {
+            putenv('OMP_NUM_THREADS');
+            putenv('OMP_THREAD_LIMIT');
+            $this->assertSame(8, $limits->invoke(null, 8));
+
+            putenv('OMP_NUM_THREADS=2,1');
+            $this->assertSame(2, $limits->invoke(null, 8));
+
+            putenv('OMP_THREAD_LIMIT=1');
+            $this->assertSame(1, $limits->invoke(null, 8));
+
+            putenv('OMP_NUM_THREADS=kaputt');
+            putenv('OMP_THREAD_LIMIT');
+            $this->assertSame(8, $limits->invoke(null, 8));
+        } finally {
+            putenv($saved[0] === false ? 'OMP_NUM_THREADS' : 'OMP_NUM_THREADS=' . $saved[0]);
+            putenv($saved[1] === false ? 'OMP_THREAD_LIMIT' : 'OMP_THREAD_LIMIT=' . $saved[1]);
+        }
     }
 
     public function test_get_architecture_returns_non_empty(): void {

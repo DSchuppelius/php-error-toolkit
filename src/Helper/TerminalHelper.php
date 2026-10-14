@@ -77,8 +77,11 @@ class TerminalHelper {
      * Gibt die aktuelle Cursor-Spalte im Terminal zurück (1-basiert).
      * Gibt 0 zurück, wenn keine gültige Position ermittelt werden kann.
      *
-     * ACHTUNG: Diese Methode ist teuer (Shell-Aufrufe + Terminal-I/O).
+     * ACHTUNG: Diese Methode ist teuer (drei stty-Aufrufe + Terminal-I/O).
      * Nicht für häufige Aufrufe (z.B. pro Log-Zeile) verwenden.
+     *
+     * stty läuft ohne Shell mit Zeitgrenze ({@see ProcessHelper}) und erbt die
+     * Standardeingabe - es stellt das Terminal ein, an dem der Prozess hängt.
      */
     public static function getCursorColumn(): int {
         if (!self::isTerminal()) {
@@ -90,25 +93,26 @@ class TerminalHelper {
             return 0;
         }
 
-        // Benötigt shell_exec() und system(); auf gehärteten Hosts nicht verfügbar.
-        if (!OsHelper::canExecuteShellCommands()) {
+        // Benötigt proc_open(); auf gehärteten Hosts nicht verfügbar.
+        if (!ProcessHelper::canStartProcesses()) {
             return 0;
         }
 
-        // Terminal-Einstellungen speichern (kein Backtick-Operator: seit PHP 8.5 deprecated)
-        $ttyProps = trim(shell_exec('stty -g 2>/dev/null') ?: '');
-        if (empty($ttyProps)) {
+        // Terminal-Einstellungen speichern
+        $ttyProps = trim(ProcessHelper::output(['stty', '-g'], inheritStdin: true) ?? '');
+        if ($ttyProps === '') {
             return 0;
         }
 
+        $tty = false;
+        $buf = '';
         try {
-            system('stty -icanon -echo 2>/dev/null');
+            ProcessHelper::run(['stty', '-icanon', '-echo'], inheritStdin: true);
 
             // /dev/tty direkt für Lesen UND Schreiben öffnen – unabhängig von STDIN,
             // das von PHPUnit, CI-Systemen oder anderen Prozessen belegt sein kann.
             $tty = fopen('/dev/tty', 'r+');
             if (!$tty) {
-                system("stty '$ttyProps' 2>/dev/null");
                 return 0;
             }
 
@@ -118,7 +122,6 @@ class TerminalHelper {
             $read = [$tty];
             $write = null;
             $except = null;
-            $buf = '';
             if (stream_select($read, $write, $except, 1) > 0) {
                 $result = @fread($tty, 16);
 
@@ -126,23 +129,46 @@ class TerminalHelper {
                     $buf = $result;
                 }
             }
-
-            fclose($tty);
-            system("stty '$ttyProps' 2>/dev/null");
-
-            if ($buf !== '' && preg_match('/^\033\[(\d+);(\d+)R$/', $buf, $matches)) {
-                return (int) $matches[2];
-            }
-
+        } catch (Exception) {
             return 0;
-        } catch (Exception $e) {
-            if (isset($tty) && is_resource($tty)) {
+        } finally {
+            if (is_resource($tty)) {
                 fclose($tty);
             }
-            // $ttyProps ist hier garantiert gesetzt und nicht leer (siehe early-return oben)
-            system("stty '$ttyProps' 2>/dev/null");
-            return 0;
+            // Terminal-Einstellungen auf jedem Weg wiederherstellen
+            self::restoreTty($ttyProps);
         }
+
+        if ($buf !== '' && preg_match('/^\033\[(\d+);(\d+)R$/', $buf, $matches)) {
+            return (int) $matches[2];
+        }
+
+        return 0;
+    }
+
+    /**
+     * Stellt die mit `stty -g` gesicherten Terminal-Einstellungen wieder her
+     * (der gesicherte Wert geht als ein Argument an stty, ohne Shell).
+     */
+    private static function restoreTty(string $ttyProps): void {
+        ProcessHelper::run(['stty', $ttyProps], inheritStdin: true);
+    }
+
+    /**
+     * Fragt das Terminal über ein Hilfsprogramm (ohne Shell, mit Zeitgrenze)
+     * und liefert die erste Zahl, die $pattern trifft; null ohne Treffer oder bei 0.
+     *
+     * @param list<string> $command
+     */
+    private static function querySize(array $command, string $pattern): ?int {
+        $output = ProcessHelper::output($command, inheritStdin: true);
+        if ($output === null || preg_match($pattern, trim($output), $matches) !== 1) {
+            return null;
+        }
+
+        $size = (int) $matches[1];
+
+        return $size > 0 ? $size : null;
     }
 
     /**
@@ -189,27 +215,27 @@ class TerminalHelper {
             return (int) $columns;
         }
 
-        // System-spezifische Befehle (benötigen shell_exec)
-        if (OsHelper::canExecuteShellCommands()) {
+        // System-spezifische Programme (ohne Shell, mit Zeitgrenze; benötigen proc_open)
+        if (ProcessHelper::canStartProcesses()) {
             if (OsHelper::isWindows()) {
-                $output = shell_exec('mode con | findstr "Columns"');
-                if ($output && preg_match('/Columns:\s*(\d+)/', $output, $matches)) {
-                    return (int) $matches[1];
+                $width = self::querySize(['mode.com', 'con'], '/Columns:\s*(\d+)/');
+                if ($width !== null) {
+                    return $width;
                 }
             } else {
                 // Unix: tput verwenden
                 if (OsHelper::findExecutable('tput')) {
-                    $width = shell_exec('tput cols 2>/dev/null');
-                    if ($width && is_numeric(trim($width))) {
-                        return (int) trim($width);
+                    $width = self::querySize(['tput', 'cols'], '/^(\d+)$/');
+                    if ($width !== null) {
+                        return $width;
                     }
                 }
 
                 // Fallback: stty verwenden
                 if (OsHelper::findExecutable('stty')) {
-                    $output = shell_exec('stty size 2>/dev/null');
-                    if ($output && preg_match('/\d+\s+(\d+)/', trim($output), $matches)) {
-                        return (int) $matches[1];
+                    $width = self::querySize(['stty', 'size'], '/\d+\s+(\d+)/');
+                    if ($width !== null) {
+                        return $width;
                     }
                 }
             }
@@ -232,27 +258,27 @@ class TerminalHelper {
             return (int) $lines;
         }
 
-        // System-spezifische Befehle (benötigen shell_exec)
-        if (OsHelper::canExecuteShellCommands()) {
+        // System-spezifische Programme (ohne Shell, mit Zeitgrenze; benötigen proc_open)
+        if (ProcessHelper::canStartProcesses()) {
             if (OsHelper::isWindows()) {
-                $output = shell_exec('mode con | findstr "Lines"');
-                if ($output && preg_match('/Lines:\s*(\d+)/', $output, $matches)) {
-                    return (int) $matches[1];
+                $height = self::querySize(['mode.com', 'con'], '/Lines:\s*(\d+)/');
+                if ($height !== null) {
+                    return $height;
                 }
             } else {
                 // Unix: tput verwenden
                 if (OsHelper::findExecutable('tput')) {
-                    $height = shell_exec('tput lines 2>/dev/null');
-                    if ($height && is_numeric(trim($height))) {
-                        return (int) trim($height);
+                    $height = self::querySize(['tput', 'lines'], '/^(\d+)$/');
+                    if ($height !== null) {
+                        return $height;
                     }
                 }
 
                 // Fallback: stty verwenden
                 if (OsHelper::findExecutable('stty')) {
-                    $output = shell_exec('stty size 2>/dev/null');
-                    if ($output && preg_match('/(\d+)\s+\d+/', trim($output), $matches)) {
-                        return (int) $matches[1];
+                    $height = self::querySize(['stty', 'size'], '/(\d+)\s+\d+/');
+                    if ($height !== null) {
+                        return $height;
                     }
                 }
             }

@@ -211,6 +211,9 @@ class OsHelper {
     /**
      * Prüft, ob shell_exec (und damit auch die Backtick-Syntax) nutzbar ist.
      * Auf gehärteten Hosts kann die Funktion via disable_functions gesperrt sein.
+     *
+     * Das Toolkit selbst startet seit 2.8 keine Shell mehr; Hilfsprogramme laufen
+     * über {@see ProcessHelper} (proc_open mit Argumentliste und Zeitgrenze).
      */
     public static function canExecuteShellCommands(): bool {
         if (!function_exists('shell_exec')) {
@@ -228,29 +231,118 @@ class OsHelper {
     }
 
     /**
-     * Gibt die verfügbaren CPU-Kerne zurück.
+     * Gibt die verfügbaren CPU-Kerne zurück (mindestens 1).
+     *
+     * Linux: wie `nproc` die Kerne, auf denen der Prozess laufen darf
+     * (Cpus_allowed_list aus /proc/self/status, sonst die Online-Kerne),
+     * begrenzt durch OMP_NUM_THREADS/OMP_THREAD_LIMIT - gelesen, nicht über ein
+     * Programm. Windows: NUMBER_OF_PROCESSORS. Sonst und als Rückfall (z. B. unter
+     * open_basedir): posix_sysconf(), zuletzt nproc bzw. sysctl ohne Shell mit
+     * Zeitgrenze ({@see ProcessHelper}).
      */
     public static function getCpuCoreCount(): int {
-        if (!self::canExecuteShellCommands()) {
-            return 1;
-        }
-
         if (self::isWindows()) {
-            $cores = shell_exec('echo %NUMBER_OF_PROCESSORS%');
-            return (int) trim($cores ?: '1');
+            return self::positiveInt(self::getEnv('NUMBER_OF_PROCESSORS')) ?? 1;
         }
 
         if (self::isLinux()) {
-            $cores = shell_exec('nproc');
-            return (int) trim($cores ?: '1');
+            $cores = self::linuxCpuCount() ?? self::sysconfCpuCount() ?? self::positiveInt(ProcessHelper::output(['nproc']));
+            return $cores !== null ? self::applyOpenMpLimits($cores) : 1;
         }
 
-        if (self::isMacOS()) {
-            $cores = shell_exec('sysctl -n hw.ncpu');
-            return (int) trim($cores ?: '1');
+        $cores = self::sysconfCpuCount();
+        if ($cores === null && self::isMacOS()) {
+            $cores = self::positiveInt(ProcessHelper::output(['sysctl', '-n', 'hw.ncpu']));
         }
 
-        return 1;
+        return $cores ?? 1;
+    }
+
+    /**
+     * Kerne, auf denen der Prozess laufen darf, aus /proc bzw. /sys; null, wenn
+     * nichts lesbar ist (z. B. unter open_basedir).
+     */
+    private static function linuxCpuCount(): ?int {
+        $status = @file_get_contents('/proc/self/status');
+        if (is_string($status) && preg_match('/^Cpus_allowed_list:\s*(\S+)/m', $status, $matches) === 1) {
+            $count = self::countCpuList($matches[1]);
+            if ($count !== null) {
+                return $count;
+            }
+        }
+
+        $online = @file_get_contents('/sys/devices/system/cpu/online');
+        if (is_string($online)) {
+            $count = self::countCpuList(trim($online));
+            if ($count !== null) {
+                return $count;
+            }
+        }
+
+        $cpuinfo = @file_get_contents('/proc/cpuinfo');
+        if (is_string($cpuinfo)) {
+            $count = (int) preg_match_all('/^processor\s*:/m', $cpuinfo);
+            return $count > 0 ? $count : null;
+        }
+
+        return null;
+    }
+
+    /**
+     * Zählt eine Linux-CPU-Liste wie "0-3,6,8-9" (= 7); null bei unlesbarem Format.
+     */
+    private static function countCpuList(string $list): ?int {
+        if (preg_match('/^\d+(?:-\d+)?(?:,\d+(?:-\d+)?)*$/', $list) !== 1) {
+            return null;
+        }
+
+        $count = 0;
+        foreach (explode(',', $list) as $range) {
+            $bounds = explode('-', $range);
+            $count += count($bounds) === 2 ? max(0, (int) $bounds[1] - (int) $bounds[0] + 1) : 1;
+        }
+
+        return $count > 0 ? $count : null;
+    }
+
+    /**
+     * Wie nproc: OMP_NUM_THREADS (erster Wert) ersetzt die Zahl, OMP_THREAD_LIMIT deckelt sie.
+     */
+    private static function applyOpenMpLimits(int $cores): int {
+        $threads = self::getEnv('OMP_NUM_THREADS');
+        if ($threads !== null) {
+            $cores = self::positiveInt(explode(',', $threads)[0]) ?? $cores;
+        }
+
+        $limit = self::positiveInt(self::getEnv('OMP_THREAD_LIMIT'));
+
+        return $limit !== null ? min($cores, $limit) : $cores;
+    }
+
+    /**
+     * Online-Kerne über posix_sysconf() (PHP 8.3+ mit posix); null, wenn nicht verfügbar.
+     */
+    private static function sysconfCpuCount(): ?int {
+        if (!function_exists('posix_sysconf') || !defined('POSIX_SC_NPROCESSORS_ONLN')) {
+            return null;
+        }
+
+        $cores = posix_sysconf(POSIX_SC_NPROCESSORS_ONLN);
+
+        return $cores > 0 ? $cores : null;
+    }
+
+    /**
+     * Positive Ganzzahl aus einem Text ("8\n" = 8); null bei allem anderen.
+     */
+    private static function positiveInt(?string $value): ?int {
+        if ($value === null || preg_match('/^\s*(\d+)\s*$/', $value, $matches) !== 1) {
+            return null;
+        }
+
+        $number = (int) $matches[1];
+
+        return $number > 0 ? $number : null;
     }
 
     /**

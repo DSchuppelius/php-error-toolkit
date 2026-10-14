@@ -589,7 +589,7 @@ OsHelper::getCurrentUserId();     // UID (Unix only)
 OsHelper::isPrivilegedUser();     // Check for root/admin
 
 // System Information
-OsHelper::getCpuCoreCount();      // Number of CPU cores
+OsHelper::getCpuCoreCount();      // Usable CPU cores (Linux: like nproc, read from /proc - no program started)
 OsHelper::getArchitecture();      // System architecture (x86_64, arm64, etc.)
 OsHelper::getKernelVersion();     // Kernel version
 OsHelper::getSystemInfo();        // Complete system info array
@@ -606,10 +606,33 @@ Terminal detection and capabilities:
 ```php
 use ERRORToolkit\Helper\TerminalHelper;
 
-TerminalHelper::isTerminal();      // Check if running in terminal
-TerminalHelper::isDebugConsole();  // Check if running in debug console
-TerminalHelper::getCursorColumn(); // Get current cursor position
+TerminalHelper::isTerminal();         // Check if running in terminal
+TerminalHelper::isDebugConsole();     // Check if running in debug console
+TerminalHelper::getCursorColumn();    // Get current cursor position
+TerminalHelper::getTerminalWidth();   // COLUMNS, tput cols or stty size; 80 as fallback
+TerminalHelper::getTerminalHeight();  // LINES, tput lines or stty size; 24 as fallback
 ```
+
+### ProcessHelper
+
+Starts short helper programs (`stty`, `tput`, `sysctl`, `nproc`) **without a shell and with a time limit**.
+The toolkit uses it internally instead of `shell_exec()`/`system()`; it is public for packages that, like this
+one, cannot depend on `php-common-toolkit` (whose `Shell` class is the tool of choice everywhere else):
+
+```php
+use ERRORToolkit\Helper\ProcessHelper;
+
+ProcessHelper::canStartProcesses();                       // false if proc_open() is disabled
+ProcessHelper::output(['tput', 'cols'], inheritStdin: true); // stdout on exit code 0, otherwise null
+ProcessHelper::run(['sysctl', '-n', 'hw.ncpu'], timeout: 2.0);
+// ['exitCode' => 0, 'output' => "8\n", 'timedOut' => false], or null if the program does not start
+```
+
+- Program and arguments are passed as a list (`proc_open()` without `/bin/sh` or `cmd.exe`): no quoting, no
+  injection through arguments.
+- stdout is read with a deadline (default 5 s, at most 1 MiB is kept); on expiry the program gets SIGTERM and,
+  after one second, SIGKILL. Meant for programs without child processes of their own.
+- stderr is discarded; stdin is empty unless `inheritStdin: true`.
 
 ### PhpUnitHelper
 
@@ -648,4 +671,17 @@ This is a personal toolkit for Daniel Schuppelius's projects. For bugs or featur
 
 ## Versions
 
-Releases are tagged in Git; `git tag --sort=-v:refname` lists them (latest: v2.7.3). There is no separate changelog file — the tags and the commit history are the record.
+### 2.8 — No shell, time limit for helper programs
+
+- New `ERRORToolkit\Helper\ProcessHelper`: runs a program from an argument list without a shell, with a time
+  limit (SIGTERM, then SIGKILL).
+- `OsHelper::getCpuCoreCount()` no longer runs `nproc` through `shell_exec()`: on Linux it reads
+  `/proc/self/status` (`Cpus_allowed_list`, like `nproc`, including `OMP_NUM_THREADS`/`OMP_THREAD_LIMIT`), then
+  `/sys/devices/system/cpu/online` and `/proc/cpuinfo`; Windows reads `NUMBER_OF_PROCESSORS`; other systems use
+  `posix_sysconf()`. Only as a last resort (e.g. under `open_basedir`) does it start `nproc` or `sysctl` via
+  `ProcessHelper`. It now also works where `shell_exec()` is disabled.
+- `TerminalHelper` runs `stty`, `tput` and `mode` via `ProcessHelper` instead of `shell_exec()`/`system()`; the
+  saved terminal settings go to `stty` as one argument and are restored on every path.
+- `OsHelper::canExecuteShellCommands()` stays, but the toolkit itself no longer needs a shell.
+
+Releases are tagged in Git; `git tag --sort=-v:refname` lists them (latest: v2.8.0). There is no separate changelog file — the tags and the commit history are the record.
