@@ -684,7 +684,11 @@ This is a personal toolkit for Daniel Schuppelius's projects. For bugs or featur
 
 ## Versions
 
-### 2.8 — No shell, time limit for helper programs
+### 2.8.1 — No shell, time limit for helper programs
+
+Same code as the Git tag v2.8.0. Packagist still lists an orphaned `v2.8` entry (it points to the v2.7.1
+commit) and therefore skipped v2.8.0, which normalizes to the same version. Require `^2.8.1`.
+
 
 - New `ERRORToolkit\Helper\ProcessHelper`: runs a program from an argument list without a shell, with a time
   limit (SIGTERM, then SIGKILL).
@@ -697,4 +701,4 @@ This is a personal toolkit for Daniel Schuppelius's projects. For bugs or featur
   saved terminal settings go to `stty` as one argument and are restored on every path.
 - `OsHelper::canExecuteShellCommands()` stays, but the toolkit itself no longer needs a shell.
 
-Releases are tagged in Git; `git tag --sort=-v:refname` lists them (latest: v2.8.0). There is no separate changelog file — the tags and the commit history are the record.
+Releases are tagged in Git; `git tag --sort=-v:refname` lists them (latest: v2.8.1). There is no separate changelog file — the tags and the commit history are the record.
