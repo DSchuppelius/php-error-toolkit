@@ -32,6 +32,9 @@ final class ProcessHelper {
     /** Zeitgrenze in Sekunden, wenn der Aufrufer keine angibt. */
     public const DEFAULT_TIMEOUT = 5.0;
 
+    /** Exit-Code des Kindprozesses, wenn exec vor PHP 8.3 scheitert (Programm fehlt). */
+    private const EXIT_EXEC_FAILED = 127;
+
     /** Nachfrist zwischen SIGTERM und SIGKILL. */
     private const KILL_GRACE = 1.0;
 
@@ -139,6 +142,14 @@ final class ProcessHelper {
             proc_close($process);
         }
         // Sonst raeumt PHP die Ressource ohne blockierendes Warten ab.
+
+        // Vor PHP 8.3 startet proc_open per fork/exec: Fehlt das Programm,
+        // "gelingt" der Start, und der Kindprozess endet still mit 127 (exec
+        // gescheitert). Ab 8.3 (posix_spawn) scheitert schon proc_open. Beide
+        // Faelle heissen hier gleich: das Programm startet nicht.
+        if (PHP_VERSION_ID < 80300 && !$windows && $exitCode === self::EXIT_EXEC_FAILED && $output === '') {
+            return null;
+        }
 
         return ['exitCode' => $exitCode, 'output' => $output, 'timedOut' => $timedOut];
     }
