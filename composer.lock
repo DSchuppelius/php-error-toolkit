@@ -3093,13 +3093,17 @@
         {
             "name": "symfony/polyfill-mbstring",
             "version": "v1.43.3",
+            "version": "v1.43.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/polyfill-mbstring.git",
                 "reference": "122889ed24dc000165bcbfd77ec412f15cbdfc6a"
+                "reference": "122889ed24dc000165bcbfd77ec412f15cbdfc6a"
             },
             "dist": {
                 "type": "zip",
+                "url": "https://api.github.com/repos/symfony/polyfill-mbstring/zipball/122889ed24dc000165bcbfd77ec412f15cbdfc6a",
+                "reference": "122889ed24dc000165bcbfd77ec412f15cbdfc6a",
                 "url": "https://api.github.com/repos/symfony/polyfill-mbstring/zipball/122889ed24dc000165bcbfd77ec412f15cbdfc6a",
                 "reference": "122889ed24dc000165bcbfd77ec412f15cbdfc6a",
                 "shasum": ""
@@ -3154,6 +3158,7 @@
             ],
             "support": {
                 "source": "https://github.com/symfony/polyfill-mbstring/tree/v1.43.3"
+                "source": "https://github.com/symfony/polyfill-mbstring/tree/v1.43.3"
             },
             "funding": [
                 {
@@ -3173,6 +3178,7 @@
                     "type": "tidelift"
                 }
             ],
+            "time": "2026-10-28T09:35:49+00:00"
             "time": "2026-10-28T09:35:49+00:00"
         },
         {
@@ -3817,13 +3823,17 @@
         {
             "name": "vlucas/phpdotenv",
             "version": "v5.8.0",
+            "version": "v5.8.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/phpdotenv/phpdotenv.git",
                 "reference": "96149103e62ac67e915f6d2ef59b72dee2e011e0"
+                "reference": "96149103e62ac67e915f6d2ef59b72dee2e011e0"
             },
             "dist": {
                 "type": "zip",
+                "url": "https://api.github.com/repos/phpdotenv/phpdotenv/zipball/96149103e62ac67e915f6d2ef59b72dee2e011e0",
+                "reference": "96149103e62ac67e915f6d2ef59b72dee2e011e0",
                 "url": "https://api.github.com/repos/phpdotenv/phpdotenv/zipball/96149103e62ac67e915f6d2ef59b72dee2e011e0",
                 "reference": "96149103e62ac67e915f6d2ef59b72dee2e011e0",
                 "shasum": ""
@@ -3852,6 +3862,7 @@
                     "forward-command": false
                 },
                 "branch-alias": {
+                    "dev-master": "5.8-dev"
                     "dev-master": "5.8-dev"
                 }
             },
@@ -3885,6 +3896,8 @@
             "support": {
                 "issues": "https://github.com/phpdotenv/phpdotenv/issues",
                 "source": "https://github.com/phpdotenv/phpdotenv/tree/v5.8.0"
+                "issues": "https://github.com/phpdotenv/phpdotenv/issues",
+                "source": "https://github.com/phpdotenv/phpdotenv/tree/v5.8.0"
             },
             "funding": [
                 {
@@ -3896,6 +3909,7 @@
                     "type": "tidelift"
                 }
             ],
+            "time": "2026-10-25T16:26:19+00:00"
             "time": "2026-10-25T16:26:19+00:00"
         },
         {
