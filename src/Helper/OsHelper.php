@@ -94,7 +94,9 @@ class OsHelper {
      * Prüft, ob eine Datei ausführbar ist.
      */
     public static function isExecutable(string $path): bool {
-        if (!file_exists($path)) {
+        // Unter open_basedir warnt schon file_exists() bei jedem Pfad außerhalb
+        // der Freigabe - findExecutable() läuft aber den ganzen PATH ab.
+        if (!self::isAllowedByOpenBasedir($path) || !file_exists($path)) {
             return false;
         }
 
@@ -105,6 +107,39 @@ class OsHelper {
         }
 
         return is_executable($path);
+    }
+
+    /**
+     * Darf PHP den Pfad nach open_basedir überhaupt anfassen? Ohne
+     * open_basedir immer ja.
+     *
+     * Verglichen wird wie in PHP als Präfix: Ein Eintrag mit "/" am Ende gibt
+     * nur das Verzeichnis frei, einer ohne auch alles, was so beginnt
+     * (z.B. gibt "/usr/bin/setsid" genau diese Datei frei). Symbolische Links
+     * löst diese Prüfung nicht auf - sie soll nur die Warnung für Pfade
+     * vermeiden, die erkennbar außerhalb liegen.
+     */
+    public static function isAllowedByOpenBasedir(string $path): bool {
+        $openBasedir = trim((string) ini_get('open_basedir'));
+        if ($openBasedir === '' || $path === '') {
+            return true;
+        }
+
+        $normalize = static fn (string $value): string => self::isWindows() ? strtolower(str_replace('\\', '/', $value)) : $value;
+        $path = $normalize($path);
+
+        foreach (explode(PATH_SEPARATOR, $openBasedir) as $entry) {
+            $entry = $normalize(trim($entry));
+            if ($entry === '') {
+                continue;
+            }
+            // Das Verzeichnis selbst ist auch ohne abschließenden "/" frei
+            if (str_starts_with($path, $entry) || $path === rtrim($entry, '/')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
