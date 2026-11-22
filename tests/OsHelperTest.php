@@ -193,4 +193,35 @@ class OsHelperTest extends TestCase {
             $this->assertTrue(OsHelper::isUnix());
         }
     }
+
+    /**
+     * Unter open_basedir warnte file_exists() bei jedem PATH-Verzeichnis
+     * außerhalb der Freigabe - bei jedem Jobstart des Webservice zweimal
+     * (/usr/sbin, /usr/local/sbin), obwohl /usr/bin/setsid gefunden wurde.
+     */
+    public function test_find_executable_warnt_nicht_unter_open_basedir(): void {
+        if (OsHelper::isWindows() || !is_file('/usr/bin/env')) {
+            $this->markTestSkipped('braucht /usr/bin/env');
+        }
+
+        $root = dirname(__DIR__);
+        $code = 'set_error_handler(static function (int $no, string $text): never { fwrite(STDOUT, "WARNUNG: " . $text); exit(3); });'
+            . 'require ' . var_export($root . '/vendor/autoload.php', true) . ';'
+            . '$_SERVER["PATH"] = "/usr/sbin:/usr/local/sbin:/nirgendwo:/usr/bin";'
+            . 'echo \ERRORToolkit\Helper\OsHelper::findExecutable("env") ?? "nichts";';
+        $command = escapeshellarg(PHP_BINARY) . ' -d open_basedir=' . escapeshellarg($root . ':/usr/bin/env') . ' -r ' . escapeshellarg($code) . ' 2>&1';
+
+        exec($command, $output, $exit);
+
+        $this->assertSame('/usr/bin/env', implode("\n", $output));
+        $this->assertSame(0, $exit);
+    }
+
+    public function test_is_allowed_by_open_basedir_ohne_einschraenkung(): void {
+        if (trim((string) ini_get('open_basedir')) !== '') {
+            $this->markTestSkipped('Der Testlauf selbst steht unter open_basedir');
+        }
+
+        $this->assertTrue(OsHelper::isAllowedByOpenBasedir('/usr/sbin/setsid'));
+    }
 }
